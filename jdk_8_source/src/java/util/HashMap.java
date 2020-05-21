@@ -277,9 +277,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * TreeNode subclass, and in LinkedHashMap for its Entry subclass.)
      */
     static class Node<K,V> implements Map.Entry<K,V> {
+        //hash值，hash(key)方法计算得出(key.hashCode和扰动函数得出)
         final int hash;
+        //键
         final K key;
+        //值
         V value;
+        //指向下个Node节点的引用
         Node<K,V> next;
 
         Node(int hash, K key, V value, Node<K,V> next) {
@@ -375,6 +379,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     /**
      * Returns a power of two size for the given target capacity.
      */
+    /**
+     * 返回一个比给定整数大且最接近的2的幂次方正整数
+     * 原理：通过不断把第一个1开始后面的位变成1，再返回 n + 1,即为2的幂
+     */
     static final int tableSizeFor(int cap) {
         int n = cap - 1;
         n |= n >>> 1;
@@ -392,6 +400,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * necessary. When allocated, length is always a power of two.
      * (We also tolerate length zero in some operations to allow
      * bootstrapping mechanics that are currently not needed.)
+     */
+    /**
+     * Node[]数组table在首次使用时初始化，并且根据需要调节大小。
+     * 分配大小后，长度总是2的幂。
+     * 长度总是2的幂好处：(n - 1) & hash 计算key将被放置的槽位，n 为 table 长度；比 %取模运算效率高
+     * （在某些操作中，我们还允许长度为零，以允许使用当前不需要的引导机制。）
      */
     transient Node<K,V>[] table;
 
@@ -424,11 +438,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     // Additionally, if the table array has not been allocated, this
     // field holds the initial array capacity, or zero signifying
     // DEFAULT_INITIAL_CAPACITY.)
+    /**
+     * 下一次要调整Node数组长度的阈值 (capacity * load factor).
+     */
     int threshold;
 
     /**
      * The load factor for the hash table.
-     *
+     * 加载因子
      * @serial
      */
     final float loadFactor;
@@ -444,6 +461,9 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @throws IllegalArgumentException if the initial capacity is negative
      *         or the load factor is nonpositive
      */
+    /**
+     *  构造一个带指定初始容量和加载因子的空 HashMap
+     */
     public HashMap(int initialCapacity, float loadFactor) {
         if (initialCapacity < 0)
             throw new IllegalArgumentException("Illegal initial capacity: " +
@@ -454,6 +474,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             throw new IllegalArgumentException("Illegal load factor: " +
                                                loadFactor);
         this.loadFactor = loadFactor;
+        //根据初始容量计算数组下一次触发resize的阈值
         this.threshold = tableSizeFor(initialCapacity);
     }
 
@@ -464,6 +485,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @param  initialCapacity the initial capacity.
      * @throws IllegalArgumentException if the initial capacity is negative.
      */
+    //构造一个带指定初始容量和默认加载因子 (0.75) 的空 HashMap
     public HashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
@@ -472,7 +494,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * Constructs an empty <tt>HashMap</tt> with the default initial capacity
      * (16) and the default load factor (0.75).
      */
-    public HashMap() {//默认构造方法
+    //默认构造方法，使用默认的加载因子（0.75）
+    public HashMap() {
         this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
     }
 
@@ -485,6 +508,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @param   m the map whose mappings are to be placed in this map
      * @throws  NullPointerException if the specified map is null
      */
+    //构造一个映射关系与指定 Map 相同的新 HashMap
     public HashMap(Map<? extends K, ? extends V> m) {
         this.loadFactor = DEFAULT_LOAD_FACTOR;
         putMapEntries(m, false);
@@ -608,7 +632,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      *         (A <tt>null</tt> return can also indicate that the map
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
      */
+    /**
+     * 在此映射中关联指定值与指定键。如果该映射以前包含了一个该键的映射关系，则旧值被替换。
+     *
+     * @param key 键
+     * @param value 值
+     * @return 与 key 关联的旧值；如果 key 没有任何映射关系，则返回 null。（返回 null 还可能表示该映射之前将 null 与 key 关联。）
+     */
     public V put(K key, V value) {
+        //hash(key)：调用扰动函数计算hash值
         return putVal(hash(key), key, value, false, true);
     }
 
@@ -625,15 +657,18 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
+        //通过resize()方法初始化table
         if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;
+        //(n - 1) & hash 相当于 hash % n；如果数组中该位置为null，即没有被使用，直接构造新的Node节点放入
         if ((p = tab[i = (n - 1) & hash]) == null)
             tab[i] = newNode(hash, key, value, null);
-        else {
+        else {//如果数组中的该位置已经被占用
             Node<K,V> e; K k;
+            //如果链表的第一个节点或者树的根节点的key与待放入的key相同，
             if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
-                e = p;
+                e = p;//用一个临时节点e记录
             else if (p instanceof TreeNode)
                 e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {
@@ -650,10 +685,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     p = e;
                 }
             }
+            //key已经存在的情况，用新值替换旧值，返回旧值
             if (e != null) { // existing mapping for key
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
                     e.value = value;
+                //回调方法，提供给 LinkedHashMap 后处理的回调
                 afterNodeAccess(e);
                 return oldValue;
             }
@@ -1800,6 +1837,15 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * Entry for Tree bins. Extends LinkedHashMap.Entry (which in turn
      * extends Node) so can be used as extension of either regular or
      * linked node.
+     */
+    /**
+     * 红黑树节点
+     * 红黑树性质：
+     * 1.节点是红色或黑色。
+     * 2.根节点是黑色。
+     * 3.每个叶子节点都是黑色的空节点（NIL节点）。
+     * 4 每个红色节点的两个子结点都是黑色。(从每个叶子到根的所有路径上不能有两个连续的红色节点)
+     * 5.从任一节点到其每个叶子的所有路径都包含相同数目的黑色节点。
      */
     static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
         TreeNode<K,V> parent;  // red-black tree links
