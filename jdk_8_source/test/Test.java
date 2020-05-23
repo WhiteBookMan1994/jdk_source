@@ -9,6 +9,6 @@ public class Test {
     public static void main(String[] args) {
         String s = "hello world!";
         HashMap map = new HashMap();
-        System.out.println(map.size());
+        System.out.println((1 <<30));
     }
 }
