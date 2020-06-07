@@ -271,7 +271,7 @@ public class LinkedHashMap<K,V>
      * The head (eldest) of the doubly linked list.
      */
     /**
-     * 双链表的头（最老的节点）
+     * 双链表的头（距上次被访问时间间隔最长的节点）
      */
     transient LinkedHashMap.Entry<K,V> head;
 
@@ -279,7 +279,7 @@ public class LinkedHashMap<K,V>
      * The tail (youngest) of the doubly linked list.
      */
     /**
-     * 双链表的尾（最年轻的节点）
+     * 双链表的尾（最近被访问的节点，即距上次被访问时间间隔最长的节点）
      */
     transient LinkedHashMap.Entry<K,V> tail;
 
@@ -301,6 +301,7 @@ public class LinkedHashMap<K,V>
     // internal utilities
 
     // link at the end of list
+    // 将节点放到链表末尾
     private void linkNodeLast(LinkedHashMap.Entry<K,V> p) {
         LinkedHashMap.Entry<K,V> last = tail;
         tail = p;
@@ -377,6 +378,8 @@ public class LinkedHashMap<K,V>
     }
 
     void afterNodeInsertion(boolean evict) { // possibly remove eldest
+        // evict 在 HashMap 的 put 方法中传入的是 true
+        // removeEldestEntry 可以看作是LinkedHashMap 透出的钩子方法，本类中直接返回 false
         LinkedHashMap.Entry<K,V> first;
         if (evict && (first = head) != null && removeEldestEntry(first)) {
             K key = first.key;
@@ -786,6 +789,7 @@ public class LinkedHashMap<K,V>
         int expectedModCount;
 
         LinkedHashIterator() {
+            //双向链表中的头节点开始遍历
             next = head;
             expectedModCount = modCount;
             current = null;
