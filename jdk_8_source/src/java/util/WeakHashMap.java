@@ -699,6 +699,9 @@ public class WeakHashMap<K,V>
      * The entries in this hash table extend WeakReference, using its main ref
      * field as the key.
      */
+    /**
+     * Entry 继承了 WeakReference 弱引用类，创建键 K 的新的弱引用
+     */
     private static class Entry<K,V> extends WeakReference<Object> implements Map.Entry<K,V> {
         V value;
         final int hash;
@@ -710,6 +713,7 @@ public class WeakHashMap<K,V>
         Entry(Object key, V value,
               ReferenceQueue<Object> queue,
               int hash, Entry<K,V> next) {
+            //给键 K 对象创建一个新的的弱引用
             super(key, queue);
             this.value = value;
             this.hash  = hash;
