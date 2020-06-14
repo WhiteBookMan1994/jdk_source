@@ -44,6 +44,10 @@ import java.util.function.Consumer;
  * so this class behaves somewhat differently from other <tt>Map</tt>
  * implementations.
  *
+ * 在 WeakHashMap 中，当某个键不再正常使用时，将自动移除其条目。
+ * 更精确地说，对于一个给定的键，其映射的存在并不阻止垃圾回收器对该键的丢弃，这就使该键成为可终止的，被终止，然后被回收。
+ * 丢弃某个键时，其条目从映射中有效地移除，因此，该类的行为与其他的 Map 实现有所不同。
+ *
  * <p> Both null values and the null key are supported. This class has
  * performance characteristics similar to those of the <tt>HashMap</tt>
  * class, and has the same efficiency parameters of <em>initial capacity</em>

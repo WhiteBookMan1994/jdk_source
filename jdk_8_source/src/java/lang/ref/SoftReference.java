@@ -31,6 +31,8 @@ package java.lang.ref;
  * collector in response to memory demand.  Soft references are most often used
  * to implement memory-sensitive caches.
  *
+ * 软引用对象，垃圾回收器会根据内存需求酌情清除这些对象。 软引用最常用于实现对内存敏感的缓存。
+ *
  * <p> Suppose that the garbage collector determines at a certain point in time
  * that an object is <a href="package-summary.html#reachability">softly
  * reachable</a>.  At that time it may choose to clear atomically all soft
@@ -40,6 +42,9 @@ package java.lang.ref;
  * enqueue those newly-cleared soft references that are registered with
  * reference queues.
  *
+ * 假定垃圾回收器确定在某一时间点某个对象是软可到达对象。这时，它可以选择自动清除针对该对象的所有软引用，以及通过强引用链，
+ * 从其可以到达该对象的针对任何其他软可到达对象的所有软引用。在同一时间或晚些时候，它会将那些已经向引用队列注册的新清除的软引用加入队列。
+ *
  * <p> All soft references to softly-reachable objects are guaranteed to have
  * been cleared before the virtual machine throws an
  * <code>OutOfMemoryError</code>.  Otherwise no constraints are placed upon the
@@ -47,6 +52,9 @@ package java.lang.ref;
  * of such references to different objects will be cleared.  Virtual machine
  * implementations are, however, encouraged to bias against clearing
  * recently-created or recently-used soft references.
+ *
+ * 软可到达对象的所有软引用都要保证在虚拟机抛出 OutOfMemoryError 之前已经被清除。否则，清除软引用的时间或者清除不同对象的一组此类引用的顺序将不受任何约束。
+ * 然而，虚拟机实现不鼓励清除最近访问或使用过的软引用。
  *
  * <p> Direct instances of this class may be used to implement simple caches;
  * this class or derived subclasses may also be used in larger data structures
@@ -56,6 +64,10 @@ package java.lang.ref;
  * prevent its most recently used entries from being discarded by keeping
  * strong referents to those entries, leaving the remaining entries to be
  * discarded at the discretion of the garbage collector.
+ *
+ * 此类的直接实例可用于实现简单的缓存。 此类或派生的子类也可以在较大的数据结构中使用，以实现更复杂的缓存。
+ * 只要强烈引用软引用的引用，也就是实际上正在使用该引用，就不会清除该软引用。
+ * 因此，复杂的高速缓存可以例如通过保持对那些条目的强引用来防止其最近使用的条目被丢弃，而其余条目则由垃圾收集器来决定丢弃。
  *
  * @author   Mark Reinhold
  * @since    1.2
@@ -104,6 +116,9 @@ public class SoftReference<T> extends Reference<T> {
      * Returns this reference object's referent.  If this reference object has
      * been cleared, either by the program or by the garbage collector, then
      * this method returns <code>null</code>.
+     *
+     * 返回此引用对象的引用对象。 如果此引用对象已被程序或垃圾收集器清除，然后
+     * 此方法返回<code> null </ code>。
      *
      * @return   The object to which this reference refers, or
      *           <code>null</code> if this reference object has been cleared
