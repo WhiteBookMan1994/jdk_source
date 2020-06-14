@@ -65,7 +65,7 @@ public class WeakReference<T> extends Reference<T> {
     /**
      * Creates a new weak reference that refers to the given object and is
      * registered with the given queue.
-     * 创建引用给定对象的新的弱引用，并向给定队列注册该引用。
+     * 创建引用给定对象的新的弱引用。弱引用对象回收之后弱引用对象放到ReferenceQueue中
      * @param referent object the new weak reference will refer to
      * @param q the queue with which the reference is to be registered,
      *          or <tt>null</tt> if registration is not required

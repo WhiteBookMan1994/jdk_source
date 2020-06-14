@@ -1,5 +1,6 @@
 package util;
 
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.util.WeakHashMap;
 
@@ -15,8 +16,10 @@ public class WeakReferenceTest {
          * 必须有 pearSnow = null;才能达到new的对象PearSnow(14)只有弱引用了
          * 即注意Java中的四种引用类型针对的是new出来的对象，而非指向对象的指针变量
          */
-        WeakReference<PearSnow> weakReference = new WeakReference<>(new PearSnow(14));
+        ReferenceQueue queue = new ReferenceQueue();
+        WeakReference<PearSnow> weakReference = new WeakReference<>(new PearSnow(14),queue);
         System.out.println(weakReference.get().getAge());
+        System.out.println(queue.poll());
         //pearSnow = null;
         System.gc();
         try {
@@ -26,6 +29,7 @@ public class WeakReferenceTest {
         }
         if (weakReference.get() == null) {
             System.out.println("已回收");
+            System.out.println(queue.poll());
         }
     }
 

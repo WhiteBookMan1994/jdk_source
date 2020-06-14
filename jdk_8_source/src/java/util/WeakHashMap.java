@@ -53,6 +53,8 @@ import java.util.function.Consumer;
  * class, and has the same efficiency parameters of <em>initial capacity</em>
  * and <em>load factor</em>.
  *
+ * null 值和 null 键都被支持。该类具有与 HashMap 类相似的性能特征,并具有相同的效能参数初始容量 和加载因子。
+ *
  * <p> Like most collection classes, this class is not synchronized.
  * A synchronized <tt>WeakHashMap</tt> may be constructed using the
  * {@link Collections#synchronizedMap Collections.synchronizedMap}
@@ -271,6 +273,7 @@ public class WeakHashMap<K,V>
 
     /**
      * Use NULL_KEY for key if it is null.
+     * 如果key是null的话，使用一个空Object对象代替
      */
     private static Object maskNull(Object key) {
         return (key == null) ? NULL_KEY : key;
@@ -317,9 +320,12 @@ public class WeakHashMap<K,V>
 
     /**
      * Expunges stale entries from the table.
+     * 删除被GC回收键对应的映射关系
      */
     private void expungeStaleEntries() {
+        //从ReferenceQueue队列中获取被回收的键
         for (Object x; (x = queue.poll()) != null; ) {
+            //同步实现
             synchronized (queue) {
                 @SuppressWarnings("unchecked")
                     Entry<K,V> e = (Entry<K,V>) x;
@@ -327,6 +333,7 @@ public class WeakHashMap<K,V>
 
                 Entry<K,V> prev = table[i];
                 Entry<K,V> p = prev;
+                //遍历链表结构，找到被回收的键x，单链表删除节点
                 while (p != null) {
                     Entry<K,V> next = p.next;
                     if (p == e) {
@@ -336,6 +343,7 @@ public class WeakHashMap<K,V>
                             prev.next = next;
                         // Must not null out e.next;
                         // stale entries may be in use by a HashIterator
+                        // value引用设为null,帮助GC回收
                         e.value = null; // Help GC
                         size--;
                         break;
@@ -351,6 +359,7 @@ public class WeakHashMap<K,V>
      * Returns the table after first expunging stale entries.
      */
     private Entry<K,V>[] getTable() {
+        // 清除过时的key对应的映射
         expungeStaleEntries();
         return table;
     }
@@ -449,8 +458,11 @@ public class WeakHashMap<K,V>
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
      */
     public V put(K key, V value) {
+        //如果key是null的话，使用一个空Object对象代替
         Object k = maskNull(key);
+        //扰动函数计算hash值
         int h = hash(k);
+        //getTable()方法中清除过时的key(已被GC回收的key)对应的映射关系
         Entry<K,V>[] tab = getTable();
         int i = indexFor(h, tab.length);
 
@@ -467,6 +479,7 @@ public class WeakHashMap<K,V>
         Entry<K,V> e = tab[i];
         tab[i] = new Entry<>(k, value, queue, h, e);
         if (++size >= threshold)
+            //扩容操作
             resize(tab.length * 2);
         return null;
     }
@@ -717,7 +730,7 @@ public class WeakHashMap<K,V>
         Entry(Object key, V value,
               ReferenceQueue<Object> queue,
               int hash, Entry<K,V> next) {
-            //给键 K 对象创建一个新的的弱引用
+            //给键 Key 对象创建一个新的的弱引用关联，非强引用关联
             super(key, queue);
             this.value = value;
             this.hash  = hash;
