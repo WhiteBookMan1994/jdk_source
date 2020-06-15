@@ -10,7 +10,7 @@ import java.util.WeakHashMap;
  */
 public class WeakHashMapTest {
     public static void main(String[] args) {
-        //weakHashMap存储 学生-分数 映射
+        /*//weakHashMap存储 学生-分数 映射
         WeakHashMap<Student, Integer> weakHashMap = new WeakHashMap<>();
         //小明和小华对象分别有强引用关联：xiaoMing 和 xiaoHua；小亮直接new的对象，没有强引用关系
         Student xiaoMing = new Student("小明", 9);
@@ -29,7 +29,8 @@ public class WeakHashMapTest {
             e.printStackTrace();
         }
         System.out.println("GC 后：");
-        System.out.println(weakHashMap);
+        System.out.println(weakHashMap);*/
+        test1();
     }
 
     public static class Student {
@@ -72,16 +73,23 @@ public class WeakHashMapTest {
     }
 
     /**
-     * WeakHashMap<Integer, String> 和 WeakHashMap<String,Integer> 值得玩味
+     * 字符串常量池
      * */
-    public void test1() {
-        WeakHashMap<Integer, String> weakHashMap = new WeakHashMap<>();
-        // Integer one = 1, two = 2;
-        weakHashMap.put(1, "one");
-        weakHashMap.put(2, "two");
-        weakHashMap.put(new Integer(3),"three");
+    public static void test1() {
+        String four = "four", five = "five";
+        WeakHashMap<String,Integer> weakHashMap1 = new WeakHashMap<>();
+        weakHashMap1.put(four, 4);
+        weakHashMap1.put(five, 5);
+        weakHashMap1.put("six", 6);
+
+        WeakHashMap<String,Integer> weakHashMap2 = new WeakHashMap<>();
+        weakHashMap2.put(four, 4);
+        weakHashMap2.put(five, 5);
+        weakHashMap2.put(new String("six"), 6);
+
         System.out.println("GC 前：");
-        System.out.println(weakHashMap);
+        System.out.println(weakHashMap1);
+        System.out.println(weakHashMap2);
 
         System.gc();
         try {
@@ -90,6 +98,7 @@ public class WeakHashMapTest {
             e.printStackTrace();
         }
         System.out.println("GC 后：");
-        System.out.println(weakHashMap);
+        System.out.println(weakHashMap1);
+        System.out.println(weakHashMap2);
     }
 }
