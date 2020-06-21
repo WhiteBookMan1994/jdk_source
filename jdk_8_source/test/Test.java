@@ -7,8 +7,11 @@ import java.util.HashMap;
 public class Test {
 
     public static void main(String[] args) {
-        String s = "hello world!";
-        HashMap map = new HashMap();
-        System.out.println((1 <<30));
+        System.out.println(System.identityHashCode(new Integer(1)));
+        System.out.println(new Integer(1).hashCode());
+
+        System.out.println(System.identityHashCode(new String("A")));
+        System.out.println(new String("A").hashCode());
+        System.out.println(new String("A").hashCode());
     }
 }

@@ -40,12 +40,19 @@ import sun.misc.SharedSecrets;
  * <tt>HashMap</tt>) two keys <tt>k1</tt> and <tt>k2</tt> are considered equal
  * if and only if <tt>(k1==null ? k2==null : k1.equals(k2))</tt>.)
  *
+ * 此类利用哈希表实现 Map 接口，比较键（和值）时使用引用相等性代替对象相等性。
+ * 换句话说，在 IdentityHashMap 中，当且仅当 (k1==k2) 时，才认为两个键 k1 和 k2 相等
+ * （在正常 Map 实现（如 HashMap）中，当且仅当满足下列条件时才认为两个键 k1 和 k2 相等：(k1==null ? k2==null : e1.equals(e2))）。
+ *
  * <p><b>This class is <i>not</i> a general-purpose <tt>Map</tt>
  * implementation!  While this class implements the <tt>Map</tt> interface, it
  * intentionally violates <tt>Map's</tt> general contract, which mandates the
  * use of the <tt>equals</tt> method when comparing objects.  This class is
  * designed for use only in the rare cases wherein reference-equality
  * semantics are required.</b>
+ *
+ * 此类不是 通用 Map 实现！此类实现 Map 接口时，它有意违反 Map 的常规协定，该协定在比较对象时强制使用 equals 方法。
+ * 此类设计仅用于其中需要引用相等性语义的罕见情况。
  *
  * <p>A typical use of this class is <i>topology-preserving object graph
  * transformations</i>, such as serialization or deep-copying.  To perform such
@@ -56,10 +63,16 @@ import sun.misc.SharedSecrets;
  * example, a debugging facility might wish to maintain a proxy object for
  * each object in the program being debugged.
  *
+ * 此类的典型用法是拓扑保留对象图形转换，如序列化或深层复制。
+ * 要执行这样的转换，程序必须维护用于跟踪所有已处理对象引用的“节点表”。节点表一定不等于不同对象，即使它们偶然相等也如此。
+ * 此类的另一种典型用法是维护代理对象。例如，调试设施可能希望为正在调试程序中的每个对象维护代理对象。
+ *
  * <p>This class provides all of the optional map operations, and permits
  * <tt>null</tt> values and the <tt>null</tt> key.  This class makes no
  * guarantees as to the order of the map; in particular, it does not guarantee
  * that the order will remain constant over time.
+ *
+ * 此类提供所有的可选映射操作，并且允许 null 值和 null 键。此类对映射的顺序不提供任何保证；特别是不保证顺序随时间的推移保持不变。
  *
  * <p>This class provides constant-time performance for the basic
  * operations (<tt>get</tt> and <tt>put</tt>), assuming the system
@@ -90,6 +103,8 @@ import sun.misc.SharedSecrets;
  * associated with a key that an instance already contains is not a
  * structural modification.)  This is typically accomplished by
  * synchronizing on some object that naturally encapsulates the map.
+ *
+ * 注意，此实现不是同步的。
  *
  * If no such object exists, the map should be "wrapped" using the
  * {@link Collections#synchronizedMap Collections.synchronizedMap}
@@ -146,6 +161,10 @@ public class IdentityHashMap<K,V>
      * (specified) expected maximum size of 21, given a load factor
      * of 2/3.
      */
+    /**
+     * 无参数构造函数使用的初始容量。一定是2的幂。
+     * 值32对应于（指定的）预期最大大小21，给定的负载系数为2/3。
+     */
     private static final int DEFAULT_CAPACITY = 32;
 
     /**
@@ -153,6 +172,10 @@ public class IdentityHashMap<K,V>
      * by either of the constructors with arguments.  The value 4 corresponds
      * to an expected maximum size of 2, given a load factor of 2/3.
      * MUST be a power of two.
+     */
+    /**
+     * 最小容量，如果隐式指定一个较低的值，则使用
+     * 由两个带有参数的构造函数组成。 给定2/3的负载系数，值4对应于预期的最大大小2。 必须是2的幂。
      */
     private static final int MINIMUM_CAPACITY = 4;
 
@@ -165,10 +188,21 @@ public class IdentityHashMap<K,V>
      * because it has to have at least one slot with the key == null
      * in order to avoid infinite loops in get(), put(), remove()
      */
+    /**
+     * 最大容量，如果隐式指定了更高的值，则使用的最大容量
+     * 由任何一个带参数的构造函数。必须是2的幂且 <= 1<<29。
+     *
+     * 事实上，该Map最多只能有MAXIMUM_CAPACITY-1个元素，因为它必须有一个key等于null的位置，
+     * 这是为了避免get,put,remove方法的无限循环
+     */
     private static final int MAXIMUM_CAPACITY = 1 << 29;
 
     /**
      * The table, resized as necessary. Length MUST always be a power of two.
+     */
+    /**
+     * 对象数组table，根据需要调整大小。 长度必须始终为2的幂。
+     * 注意：是Object对象数组；其他的 Map 都是Entry<K,V>或者Node<K,V>的类结构
      */
     transient Object[] table; // non-private to simplify nested class access
 
@@ -177,15 +211,22 @@ public class IdentityHashMap<K,V>
      *
      * @serial
      */
+    /** map中键值对的数量 */
     int size;
 
     /**
      * The number of modifications, to support fast-fail iterators
      */
+    /**
+     * 修改的数量，以支持 fast-fail 的迭代器
+     */
     transient int modCount;
 
     /**
      * Value representing null keys inside tables.
+     */
+    /**
+     * 代表key = null
      */
     static final Object NULL_KEY = new Object();
 
@@ -290,15 +331,24 @@ public class IdentityHashMap<K,V>
 
     /**
      * Returns index for Object x.
+     * 返回对象x的在table数组中的索引位置,结果一定是偶数。
      */
     private static int hash(Object x, int length) {
         int h = System.identityHashCode(x);
         // Multiply by -127, and left-shift to use least bit as part of hash
+        // 乘以-127，然后左移以将最低位用作哈希的一部分
+        /* h << 1: 左移，末位补0，偶数
+           h << 8: 同理，偶数
+           偶数减偶数，还是偶数，即二进制末位为0
+           0与任何数(0/1)相与还是0
+           即最后的结果，二进制末位是0，说明是偶数*/
         return ((h << 1) - (h << 8)) & (length - 1);
     }
 
     /**
      * Circularly traverses table of size len.
+     * 循环遍历大小为len的table。
+     * 因为value总在key的下一个位置，所以每次 + 2，遍历所有的key
      */
     private static int nextKeyIndex(int i, int len) {
         return (i + 2 < len ? i + 2 : 0);
@@ -326,13 +376,17 @@ public class IdentityHashMap<K,V>
         Object k = maskNull(key);
         Object[] tab = table;
         int len = tab.length;
+        // 获取 key 在 table 数组中的索引
         int i = hash(k, len);
         while (true) {
             Object item = tab[i];
+            //相等，返回数组下一个位置存储的值
             if (item == k)
                 return (V) tab[i + 1];
+            //下一个key的索引位置为null，意味着当前 map 中所有键对象均已被遍历，没有找到对应key
             if (item == null)
                 return null;
+            //遍历下一个key的索引位置
             i = nextKeyIndex(i, len);
         }
     }
@@ -407,26 +461,34 @@ public class IdentityHashMap<K,V>
      * hash map.  If the map previously contained a mapping for the key, the
      * old value is replaced.
      *
-     * @param key the key with which the specified value is to be associated
-     * @param value the value to be associated with the specified key
+     * 在此标识哈希映射中关联指定值与指定键。如果映射以前包含了一个此键的映射关系，那么将替换旧值。
+     *
+     * @param key the key with which the specified value is to be associated 要将指定值关联到的键
+     * @param value the value to be associated with the specified key 要关联到指定键的值
      * @return the previous value associated with <tt>key</tt>, or
      *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
      *         (A <tt>null</tt> return can also indicate that the map
      *         previously associated <tt>null</tt> with <tt>key</tt>.)
+     *         返回与 key 相关联的先前值，如果 key 没有映射关系，则返回 null（返回 null 可能还表示映射以前将 null 与指定键关联）
      * @see     Object#equals(Object)
      * @see     #get(Object)
      * @see     #containsKey(Object)
      */
     public V put(K key, V value) {
+        //key = null的处理
         final Object k = maskNull(key);
-
+        //retryAfterResize是java label标签，用于循环代码块之前
         retryAfterResize: for (;;) {
             final Object[] tab = table;
             final int len = tab.length;
+            // 计算键在数组中的位置,结果一定是偶数
             int i = hash(k, len);
 
             for (Object item; (item = tab[i]) != null;
+                 // 线性探测法 解决 hash 冲突;每次递增2
+                 // 找到下一个 key的位置,即 (i + 2 < len ? i + 2 : 0)
                  i = nextKeyIndex(i, len)) {
+                // 使用 == 比较键对象，如果为true，新值替换旧值
                 if (item == k) {
                     @SuppressWarnings("unchecked")
                         V oldValue = (V) tab[i + 1];
@@ -436,8 +498,9 @@ public class IdentityHashMap<K,V>
             }
 
             final int s = size + 1;
-            // Use optimized form of 3 * s.
+            // Use optimized form of 3 * s.使用3 * s的优化形式。
             // Next capacity is len, 2 * current capacity.
+            // 如果 map 中键值对的数目size * 3 大于 table 数组的长度 len，则触发扩容操作
             if (s + (s << 1) > len && resize(len))
                 continue retryAfterResize;
 
@@ -457,6 +520,7 @@ public class IdentityHashMap<K,V>
      */
     private boolean resize(int newCapacity) {
         // assert (newCapacity & -newCapacity) == newCapacity; // power of 2
+        // table 数组的新长度是旧长度的 2 倍
         int newLength = newCapacity * 2;
 
         Object[] oldTable = table;
@@ -468,13 +532,14 @@ public class IdentityHashMap<K,V>
         }
         if (oldLength >= newLength)
             return false;
-
+        //定义新的 table[]，直接替换
         Object[] newTable = new Object[newLength];
 
         for (int j = 0; j < oldLength; j += 2) {
             Object key = oldTable[j];
             if (key != null) {
                 Object value = oldTable[j+1];
+                // 置null,帮助GC
                 oldTable[j] = null;
                 oldTable[j+1] = null;
                 int i = hash(key, newLength);
@@ -531,6 +596,8 @@ public class IdentityHashMap<K,V>
                     V oldValue = (V) tab[i + 1];
                 tab[i + 1] = null;
                 tab[i] = null;
+                // 第i个位置的键值对移除了,空出了位置,看后面是否有键值对要填补这个位置(有些键值对是因为线性探测导致其位置偏离了其hash值)
+                // 维持 put、get 等方法依赖的线性探测关系
                 closeDeletion(i);
                 return oldValue;
             }
@@ -579,6 +646,12 @@ public class IdentityHashMap<K,V>
      *
      * @param d the index of a newly empty deleted slot
      */
+    /**
+     * 删除后重新哈希所有可能冲突的条目。 这保留了get，put等所需的线性探针碰撞属性。
+     *
+     * 指定位置的键值对移除了,空出了位置,看后面是否有键值对要填补这个位置(有些键值对是因为线性探测导致其位置偏离了其hash值)
+     * @param d the index of a newly empty deleted slot
+     */
     private void closeDeletion(int d) {
         // Adapted from Knuth Section 6.4 Algorithm R
         Object[] tab = table;
@@ -588,7 +661,11 @@ public class IdentityHashMap<K,V>
         // starting at index immediately following deletion,
         // and continuing until a null slot is seen, indicating
         // the end of a run of possibly-colliding keys.
+        //寻找要交换到新腾出的插槽中的项，该操作从删除后立即从索引开始，一直持续到看到空插槽为止，这表明可能发生冲突的键结束。
         Object item;
+        // d:空出来的键值对位置
+        // i:当前处理的键值对位置
+        // 直到key==null时才退出循环
         for (int i = nextKeyIndex(d, len); (item = tab[i]) != null;
              i = nextKeyIndex(i, len) ) {
             // The following test triggers if the item at slot i (which
@@ -597,8 +674,23 @@ public class IdentityHashMap<K,V>
             // newly vacated i.  This process will terminate when we hit
             // the null slot at the end of this run.
             // The test is messy because we are using a circular table.
+            /**
+             * 以下测试会触发插槽i中的项目（散列在插槽r中）是否应占据d腾出的位置。
+             * 如果是这样，我们将其交换，然后在新腾出的i处继续d。 当我们在此运行结束时点击空插槽时，此过程将终止。
+             * 该测试是混乱的，因为我们使用的是循环数组table。
+             * */
+
             int r = hash(item, len);
+            // i != r:证明item是被线性探测后放置在位置i;
+
+            // 这种情况 在插入时,线性探测出现了循环
+            // i<r:item通过线性探测到前面位置r前面去了
+            // ___i____r_____d____ i<r<=d
+            // ___d____i_____r____ d<=i<r
+
+            //(i < r && (r <= d || d <= i))
             if ((i < r && (r <= d || d <= i)) || (r <= d && d <= i)) {
+                // 把item对应的键值对放置到位置d;位置i为新空出来的键值对位置;
                 tab[d] = item;
                 tab[d + 1] = tab[i + 1];
                 tab[i] = null;

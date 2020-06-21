@@ -505,6 +505,14 @@ public final class System {
      * @return  the hashCode
      * @since   JDK1.1
      */
+    /**
+     * 无论给定对象的类是否覆盖hashCode（），都为给定对象返回与默认方法hashCode（）返回的哈希码相同的哈希码。
+     * null 对象返回的是 0
+     *
+     * @param x object for which the hashCode is to be calculated
+     * @return  the hashCode
+     * @since   JDK1.1
+     */
     public static native int identityHashCode(Object x);
 
     /**
