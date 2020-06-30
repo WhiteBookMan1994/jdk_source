@@ -36,10 +36,16 @@ import java.util.function.Consumer;
  * ordering} of its keys, or by a {@link Comparator} provided at map
  * creation time, depending on which constructor is used.
  *
+ * 基于红黑树（Red-Black tree）的 NavigableMap 实现。
+ * 该映射根据其键的自然顺序进行排序，或者根据创建映射时提供的 Comparator 进行排序，具体取决于使用的构造方法。
+ *
  * <p>This implementation provides guaranteed log(n) time cost for the
  * {@code containsKey}, {@code get}, {@code put} and {@code remove}
  * operations.  Algorithms are adaptations of those in Cormen, Leiserson, and
  * Rivest's <em>Introduction to Algorithms</em>.
+ *
+ * 此实现为 containsKey、get、put 和 remove 操作提供受保证的 log(n) 时间开销。
+ * 这些算法是 Cormen、Leiserson 和 Rivest 的 Introduction to Algorithms 中的算法的改编。
  *
  * <p>Note that the ordering maintained by a tree map, like any sorted map, and
  * whether or not an explicit comparator is provided, must be <em>consistent
@@ -53,6 +59,12 @@ import java.util.function.Consumer;
  * of a sorted map <em>is</em> well-defined even if its ordering is
  * inconsistent with {@code equals}; it just fails to obey the general contract
  * of the {@code Map} interface.
+ *
+ * 注意，如果要正确实现 Map 接口，则有序映射所保持的顺序（无论是否明确提供了比较器）都必须与 equals 一致。（
+ * 关于与 equals 一致 的精确定义，请参阅 Comparable 或 Comparator）。
+ * 这是因为 Map 接口是按照 equals 操作定义的，但有序映射使用它的 compareTo（或 compare）方法对所有键进行比较，
+ * 因此从有序映射的观点来看，此方法认为相等的两个键就是相等的。
+ * 即使排序与 equals 不一致，有序映射的行为仍然是 定义良好的，只不过没有遵守 Map 接口的常规协定。
  *
  * <p><strong>Note that this implementation is not synchronized.</strong>
  * If multiple threads access a map concurrently, and at least one of the
@@ -68,6 +80,13 @@ import java.util.function.Consumer;
  * unsynchronized access to the map: <pre>
  *   SortedMap m = Collections.synchronizedSortedMap(new TreeMap(...));</pre>
  *
+ *   注意，此实现不是同步的。如果多个线程同时访问一个映射，并且其中至少一个线程从结构上修改了该映射，则其必须 外部同步。
+ *   （结构上的修改是指添加或删除一个或多个映射关系的操作；仅改变与现有键关联的值不是结构上的修改。）这一般是通过对自然封装该映射的对象执行同步操作来完成的。
+ *   如果不存在这样的对象，则应该使用 Collections.synchronizedSortedMap 方法来“包装”该映射。
+ *   最好在创建时完成这一操作，以防止对映射进行意外的不同步访问，如下所示：
+ *
+ *    SortedMap m = Collections.synchronizedSortedMap(new TreeMap(...));
+ *
  * <p>The iterators returned by the {@code iterator} method of the collections
  * returned by all of this class's "collection view methods" are
  * <em>fail-fast</em>: if the map is structurally modified at any time after
@@ -77,6 +96,10 @@ import java.util.function.Consumer;
  * modification, the iterator fails quickly and cleanly, rather than risking
  * arbitrary, non-deterministic behavior at an undetermined time in the future.
  *
+ * collection（由此类所有的“collection 视图方法”返回）的 iterator 方法返回的迭代器都是快速失败 的：在迭代器创建之后，
+ * 如果从结构上对映射进行修改，除非通过迭代器自身的 remove 方法，否则在其他任何时间以任何方式进行修改都将导致迭代器抛出 ConcurrentModificationException。
+ * 因此，对于并发的修改，迭代器很快就完全失败，而不会冒着在将来不确定的时间发生不确定行为的风险。
+ *
  * <p>Note that the fail-fast behavior of an iterator cannot be guaranteed
  * as it is, generally speaking, impossible to make any hard guarantees in the
  * presence of unsynchronized concurrent modification.  Fail-fast iterators
@@ -85,15 +108,22 @@ import java.util.function.Consumer;
  * exception for its correctness:   <em>the fail-fast behavior of iterators
  * should be used only to detect bugs.</em>
  *
+ * 注意，迭代器的快速失败行为无法得到保证，一般来说，当存在不同步的并发修改时，不可能作出任何肯定的保证。快速失败迭代器尽最大努力抛出 ConcurrentModificationException。
+ * 因此，编写依赖于此异常的程序的做法是错误的，正确做法是：迭代器的快速失败行为应该仅用于检测 bug。
+ *
  * <p>All {@code Map.Entry} pairs returned by methods in this class
  * and its views represent snapshots of mappings at the time they were
  * produced. They do <strong>not</strong> support the {@code Entry.setValue}
  * method. (Note however that it is possible to change mappings in the
  * associated map using {@code put}.)
  *
+ * 此类及其视图中的方法返回的所有 Map.Entry 对都表示生成它们时的映射关系的快照。它们不 支持 Entry.setValue 方法。（不过要注意的是，使用 put 更改相关映射中的映射关系是有可能的。）
+ *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
+ *
+ * 此类是 Java Collections Framework 的成员。
  *
  * @param <K> the type of keys maintained by this map
  * @param <V> the type of mapped values
@@ -118,8 +148,14 @@ public class TreeMap<K,V>
      *
      * @serial
      */
+    /**
+     * 用于维护 TreeMap 中的顺序的比较器，如果使用其键的自然顺序，则 comparator 为null。
+     */
     private final Comparator<? super K> comparator;
 
+    /**
+     * 红黑树的根节点
+     */
     private transient Entry<K,V> root;
 
     /**
@@ -144,6 +180,9 @@ public class TreeMap<K,V>
      * {@code put(Object key, Object value)} call will throw a
      * {@code ClassCastException}.
      */
+    /**
+     * 使用键的自然顺序构造一个新的、空的TreeMap。
+     */
     public TreeMap() {
         comparator = null;
     }
@@ -161,6 +200,9 @@ public class TreeMap<K,V>
      * @param comparator the comparator that will be used to order this map.
      *        If {@code null}, the {@linkplain Comparable natural
      *        ordering} of the keys will be used.
+     */
+    /**
+     * 构造一个新的、空的树映射，该映射根据给定比较器进行排序。
      */
     public TreeMap(Comparator<? super K> comparator) {
         this.comparator = comparator;
@@ -180,6 +222,9 @@ public class TreeMap<K,V>
      *         or are not mutually comparable
      * @throws NullPointerException if the specified map is null
      */
+    /**
+     * 构造一个与给定映射具有相同映射关系的新的树映射，该映射根据其键的自然顺序 进行排序。
+     */
     public TreeMap(Map<? extends K, ? extends V> m) {
         comparator = null;
         putAll(m);
@@ -193,6 +238,9 @@ public class TreeMap<K,V>
      * @param  m the sorted map whose mappings are to be placed in this map,
      *         and whose comparator is to be used to sort this map
      * @throws NullPointerException if the specified map is null
+     */
+    /**
+     * 构造一个与指定有序映射具有相同映射关系和相同排序顺序的新的树映射。
      */
     public TreeMap(SortedMap<K, ? extends V> m) {
         comparator = m.comparator();
@@ -273,6 +321,9 @@ public class TreeMap<K,V>
      * @throws NullPointerException if the specified key is null
      *         and this map uses natural ordering, or its comparator
      *         does not permit null keys
+     */
+    /**
+     * 注：返回null，可能是 treeMap 不包含该 key 的映射关系；也可能此映射将该 key 显式地映射为 null。
      */
     public V get(Object key) {
         Entry<K,V> p = getEntry(key);
@@ -519,6 +570,8 @@ public class TreeMap<K,V>
      * If the map previously contained a mapping for the key, the old
      * value is replaced.
      *
+     * 将指定值与此映射中的指定键进行关联。如果该映射以前包含此键的映射关系，那么将替换旧值。
+     *
      * @param key key with which the specified value is to be associated
      * @param value value to be associated with the specified key
      *
@@ -531,10 +584,12 @@ public class TreeMap<K,V>
      * @throws NullPointerException if the specified key is null
      *         and this map uses natural ordering, or its comparator
      *         does not permit null keys
+     *  @throws NullPointerException 如果指定键为 null 并且此映射使用自然顺序，或者其比较器不允许使用 null 键
      */
     public V put(K key, V value) {
         Entry<K,V> t = root;
         if (t == null) {
+            // 输入 key（可能为空）检查
             compare(key, key); // type (and possibly null) check
 
             root = new Entry<>(key, value, null);
@@ -2040,7 +2095,7 @@ public class TreeMap<K,V>
     }
 
 
-    // Red-black mechanics
+    // Red-black mechanics 红黑树
 
     private static final boolean RED   = false;
     private static final boolean BLACK = true;
@@ -2061,6 +2116,9 @@ public class TreeMap<K,V>
         /**
          * Make a new cell with given key, value, and parent, and with
          * {@code null} child links, and BLACK color.
+         */
+        /**
+         * 创建一个具有给定键，值和父级，并带有{@code null}左、右子节点和黑色的树节点。
          */
         Entry(K key, V value, Entry<K,V> parent) {
             this.key = key;
