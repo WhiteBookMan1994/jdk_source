@@ -161,10 +161,16 @@ public class TreeMap<K,V>
     /**
      * The number of entries in the tree
      */
+    /**
+     * 红黑树中映射的数量
+     */
     private transient int size = 0;
 
     /**
      * The number of structural modifications to the tree.
+     */
+    /**
+     * 树的结构修改次数
      */
     private transient int modCount = 0;
 
@@ -182,6 +188,7 @@ public class TreeMap<K,V>
      */
     /**
      * 使用键的自然顺序构造一个新的、空的TreeMap。
+     * 注意比较器为 null
      */
     public TreeMap() {
         comparator = null;
@@ -586,8 +593,12 @@ public class TreeMap<K,V>
      *         does not permit null keys
      *  @throws NullPointerException 如果指定键为 null 并且此映射使用自然顺序，或者其比较器不允许使用 null 键
      */
+    // 异常：
+    // 抛出 NullPointerException ： 如果指定键为 null 并且此映射使用自然顺序，或者其比较器不允许使用 null 键
+    // 抛出 ClassCastException ： 如果指定键不能与映射中的当前键进行比较
     public V put(K key, V value) {
         Entry<K,V> t = root;
+        // 初始化红黑树根结点
         if (t == null) {
             // 输入 key（可能为空）检查
             compare(key, key); // type (and possibly null) check
@@ -600,6 +611,12 @@ public class TreeMap<K,V>
         int cmp;
         Entry<K,V> parent;
         // split comparator and comparable paths
+        // 如果比较器 comparator 不为 null,则使用比较器比较新放入的key
+        // 反之，比较器 comparator 为 null,使用自然排序Comparable接口
+        /**插入处理【先插入，后调整】
+         * 1、先不考虑红黑树的规则，查找到新的key在树中的位置插入；
+         * 2、然后再调整树使其满足红黑树规则
+         * */
         Comparator<? super K> cpr = comparator;
         if (cpr != null) {
             do {
@@ -634,6 +651,7 @@ public class TreeMap<K,V>
             parent.left = e;
         else
             parent.right = e;
+        //插入节点后，红黑树的自平衡调整：左旋、右旋、变色等
         fixAfterInsertion(e);
         size++;
         modCount++;
