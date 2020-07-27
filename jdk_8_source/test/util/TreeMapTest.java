@@ -86,6 +86,7 @@ public class TreeMapTest {
         TreeMap treeMap = new TreeMap();
         treeMap.put(1, null);
         System.out.println(treeMap);
+        System.out.println(Runtime.getRuntime().availableProcessors());
     }
 
 
