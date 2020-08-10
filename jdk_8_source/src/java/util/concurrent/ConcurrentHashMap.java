@@ -841,6 +841,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     static class Node<K,V> implements Map.Entry<K,V> {
         final int hash;
         final K key;
+        //使用 volatile 修饰， 保证多线程下值V的可见性:线程A修改，线程B能立刻感知到，这也是get(K k)方法不用加锁原因
         volatile V val;
         volatile Node<K,V> next;
 
@@ -971,6 +972,14 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * full volatile semantics, but are currently coded as volatile
      * writes to be conservative.
      */
+    /*
+     * 在调整大小时，易失性访问方法用于表元素以及进行中的下一个表的元素。
+     * 选项卡参数的所有使用都必须由调用方检查为null。 所有调用方还会偏执地预先检查tab的长度是否不为零（或等效检查），
+     * 从而确保任何采用哈希值形式并以（length-1）开头的索引参数都是有效索引。
+     * 请注意，要纠正用户的任意并发错误，这些检查必须对局部变量进行操作，这在下面说明了一些奇怪的内联分配。
+     * 请注意，对setTabAt的调用始终在锁定区域内进行，因此原则上仅要求发布顺序，而不需要完全易失性语义，
+     * 但是为了保守起见，当前将其编码为易失性写入
+     */
 
     @SuppressWarnings("unchecked")
     static final <K,V> Node<K,V> tabAt(Node<K,V>[] tab, int i) {
@@ -992,10 +1001,17 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * The array of bins. Lazily initialized upon first insertion.
      * Size is always a power of two. Accessed directly by iterators.
      */
+    /**
+     * node数组。 第一次插入时延迟进行初始化。 大小始终是2的幂。 由迭代器直接访问。
+     * 注意：使用 volatile 关键字修饰，保证当前线程数组扩容时对其他线程可见
+     */
     transient volatile Node<K,V>[] table;
 
     /**
      * The next table to use; non-null only while resizing.
+     */
+    /**
+     * 数组table扩容时使用的数组；仅在扩容时非null
      */
     private transient volatile Node<K,V>[] nextTable;
 
@@ -1003,6 +1019,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * Base counter value, used mainly when there is no contention,
      * but also as a fallback during table initialization
      * races. Updated via CAS.
+     */
+    /**
+     * 基本计数器值，主要在没有争用时使用，但在表初始化争用期间也用作后备。通过CAS更新。
      */
     private transient volatile long baseCount;
 
@@ -1014,8 +1033,17 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * creation, or 0 for default. After initialization, holds the
      * next element count value upon which to resize the table.
      */
+    /**
+     * 代表数组table初始化和扩容的标志
+     * 如果sizeCtl值为负数，表明数组table在初始化或者扩容：-1 代表初始化；-(1 + 参与扩容的线程数)
+     * 当table为null时，sizeCtl值为保留创建时要使用的初始表大小，或0表示默认值。
+     * 初始化后，sizeCtl值保存下一个要调整表大小的元素计数值。
+     */
     private transient volatile int sizeCtl;
 
+    /**
+     * The next table index (plus one) to split while resizing.
+     */
     /**
      * The next table index (plus one) to split while resizing.
      */
@@ -1024,10 +1052,16 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * Spinlock (locked via CAS) used when resizing and/or creating CounterCells.
      */
+    /**
+     * 调整大小和/或创建CounterCell时使用的Spinlock（通过CAS锁定）。
+     */
     private transient volatile int cellsBusy;
 
     /**
      * Table of counter cells. When non-null, size is a power of 2.
+     */
+    /**
+     * Table of counter cells.如果为非null，则大小为2的幂
      */
     private transient volatile CounterCell[] counterCells;
 
@@ -1127,6 +1161,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * {@inheritDoc}
+     * 基准数值累加CounterCell[]数组中每个值，即为map中的键值对个数
+     * 可以理解为，为了防止多个线程竞争计数器，把每个线程的变更数映射到CounterCell[]数组的不同位置上
+     * 有点类似ConcurrentHashMap 1.7 版本的分段锁理念
      */
     public int size() {
         long n = sumCount();
@@ -1215,8 +1252,12 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * Maps the specified key to the specified value in this table.
      * Neither the key nor the value can be null.
      *
+     * 将指定键映射到此表中的指定值。键和值都不可以为 null。
+     *
      * <p>The value can be retrieved by calling the {@code get} method
      * with a key that is equal to the original key.
+     *
+     * 通过使用与原来的键相同的键调用 get 方法，可以获取相应的值。
      *
      * @param key key with which the specified value is to be associated
      * @param value value to be associated with the specified key
@@ -1231,17 +1272,24 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /** Implementation for put and putIfAbsent */
     final V putVal(K key, V value, boolean onlyIfAbsent) {
         if (key == null || value == null) throw new NullPointerException();
+        // 混淆 hashCode,得到 hash 值
         int hash = spread(key.hashCode());
+        // binCount:链表节点数目
         int binCount = 0;
         for (Node<K,V>[] tab = table;;) {
             Node<K,V> f; int n, i, fh;
             if (tab == null || (n = tab.length) == 0)
-                tab = initTable();
+                tab = initTable();//table 数组初始化
             else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+                //key 在数组上的哈希索引位置节点为null
+                //这种情况 cas 把 key-value 放在该位置上，不需要加锁
+                // cas 成功，跳出for循环；cas 失败，进到下一次循环，就走到下面的 if-else 分支了
                 if (casTabAt(tab, i, null,
                              new Node<K,V>(hash, key, value, null)))
                     break;                   // no lock when adding to empty bin
             }
+            // 如果table数组上的节点（链表头节点/树的根结点）hash值为-1，表示数组在进行扩容迁移数据，这个数组索引位置上的节点数据正在进行迁移
+            // 帮助迁移节点数据到 nextTable[] 数组
             else if ((fh = f.hash) == MOVED)
                 tab = helpTransfer(tab, f);
             else {
@@ -2382,6 +2430,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * A node inserted at head of bins during transfer operations.
      */
+    /**
+     * 在扩容迁移节点数据时，插入数组索引位置上的那个节点（链表头节点/树的根结点）
+     */
     static final class ForwardingNode<K,V> extends Node<K,V> {
         final Node<K,V>[] nextTable;
         ForwardingNode(Node<K,V>[] tab) {
@@ -2430,7 +2481,12 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /* ---------------- Table Initialization and Resizing -------------- */
+    /* ---------------- Table数组初始化和扩容 -------------- */
 
+    /**
+     * Returns the stamp bits for resizing a table of size n.
+     * Must be negative when shifted left by RESIZE_STAMP_SHIFT.
+     */
     /**
      * Returns the stamp bits for resizing a table of size n.
      * Must be negative when shifted left by RESIZE_STAMP_SHIFT.
@@ -2442,11 +2498,16 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * Initializes table, using the size recorded in sizeCtl.
      */
+    /**
+     * 使用sizeCtl中记录的值初始化table。
+     */
     private final Node<K,V>[] initTable() {
         Node<K,V>[] tab; int sc;
         while ((tab = table) == null || tab.length == 0) {
             if ((sc = sizeCtl) < 0)
+                // 这种情况 sizeCtl 为负数，表明当前table数组已经正在被其他线程初始化，当前线程自旋
                 Thread.yield(); // lost initialization race; just spin
+            // 使用Unsafe类的CAS机制，-1 赋值给 sizeCtl 成功，返回true，表示table开始初始化
             else if (U.compareAndSwapInt(this, SIZECTL, sc, -1)) {
                 try {
                     if ((tab = table) == null || tab.length == 0) {
@@ -2454,9 +2515,10 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                         @SuppressWarnings("unchecked")
                         Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
                         table = tab = nt;
-                        sc = n - (n >>> 2);
+                        sc = n - (n >>> 2);// n * 3/4
                     }
                 } finally {
+                    // 初始化后 sizeCtl 赋值为下一次触发数组扩容时的阈值
                     sizeCtl = sc;
                 }
                 break;
@@ -2515,6 +2577,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Helps transfer if a resize is in progress.
+     */
+    /**
+     * 如果table数组正在扩容，则帮助迁移数据
      */
     final Node<K,V>[] helpTransfer(Node<K,V>[] tab, Node<K,V> f) {
         Node<K,V>[] nextTab; int sc;
@@ -2724,6 +2789,9 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     /**
      * A padded cell for distributing counts.  Adapted from LongAdder
      * and Striped64.  See their internal docs for explanation.
+     */
+    /**
+     * 填充计数的填充单元格。 改编自LongAdder和Striped64。 请参阅其内部文档以获取解释。
      */
     @sun.misc.Contended static final class CounterCell {
         volatile long value;
