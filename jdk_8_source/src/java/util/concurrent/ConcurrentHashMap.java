@@ -1294,12 +1294,14 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                 tab = helpTransfer(tab, f);
             else {
                 V oldVal = null;
+                //synchronized修饰链表头节点/红黑树根结点
                 synchronized (f) {
                     if (tabAt(tab, i) == f) {
-                        if (fh >= 0) {
+                        if (fh >= 0) {//hash 值大于0，说明是链表节点
                             binCount = 1;
                             for (Node<K,V> e = f;; ++binCount) {
                                 K ek;
+                                // key 已存在的情况，替换value值
                                 if (e.hash == hash &&
                                     ((ek = e.key) == key ||
                                      (ek != null && key.equals(ek)))) {
@@ -1309,6 +1311,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                     break;
                                 }
                                 Node<K,V> pred = e;
+                                // key 不存在的情况，尾插法插入
                                 if ((e = e.next) == null) {
                                     pred.next = new Node<K,V>(hash, key,
                                                               value, null);
@@ -1316,6 +1319,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                 }
                             }
                         }
+                        // 如果数组索引位置节点为TreeBi，表明是红黑树结构
                         else if (f instanceof TreeBin) {
                             Node<K,V> p;
                             binCount = 2;
@@ -1329,14 +1333,17 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     }
                 }
                 if (binCount != 0) {
+                    // 链表节点数目超过8且table数组的长度大于64，才会把链表转化为红黑树结构
                     if (binCount >= TREEIFY_THRESHOLD)
                         treeifyBin(tab, i);
+                    // key-value 已经存在的情况，返回旧值即可，不影响size
                     if (oldVal != null)
                         return oldVal;
                     break;
                 }
             }
         }
+        // 新插入不存在的key-value的情况，需要计数器 + 1，用于计算当前Map的size
         addCount(1L, binCount);
         return null;
     }
@@ -2488,8 +2495,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * Must be negative when shifted left by RESIZE_STAMP_SHIFT.
      */
     /**
-     * Returns the stamp bits for resizing a table of size n.
-     * Must be negative when shifted left by RESIZE_STAMP_SHIFT.
+     * 返回用于调整大小为n的表的标记位。
+     * 向左移动RESIZE_STAMP_SHIFT时必须为负。
      */
     static final int resizeStamp(int n) {
         return Integer.numberOfLeadingZeros(n) | (1 << (RESIZE_STAMP_BITS - 1));
@@ -2536,6 +2543,13 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      *
      * @param x the count to add
      * @param check if <0, don't check resize, if <= 1 only check if uncontended
+     */
+    /**
+     * 添加计数，如果表太小且尚未调整大小，则扩容迁移数据。 如果已经调整大小，则在工作可用时帮助执行迁移数据。
+     * 转移后重新检查占用率，以查看是否已经需要其他调整大小，因为调整大小是滞后的。
+     *
+     * @param x 要添加的计数
+     * @param check 如果 check <0，不检查调整大小，如果 check <= 1，仅检查无竞争
      */
     private final void addCount(long x, int check) {
         CounterCell[] as; long b, s;
@@ -3005,15 +3019,20 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
      * forcing writers (who hold bin lock) to wait for readers (who do
      * not) to complete before tree restructuring operations.
      */
+    /**
+     * TreeNode作为头部使用的节点类型。
+     * TreeBins不保留用户键或值，而是指向TreeNode及其根的列表。 
+     * 它们还维护一个寄生的读写锁，迫使编写者（谁拥有bin锁）等待读者（谁没有bin）在完成树重组操作之前完成操作。
+     */
     static final class TreeBin<K,V> extends Node<K,V> {
         TreeNode<K,V> root;
         volatile TreeNode<K,V> first;
         volatile Thread waiter;
         volatile int lockState;
         // values for lockState
-        static final int WRITER = 1; // set while holding write lock
-        static final int WAITER = 2; // set when waiting for write lock
-        static final int READER = 4; // increment value for setting read lock
+        static final int WRITER = 1; // set while holding write lock 持有写锁状态
+        static final int WAITER = 2; // set when waiting for write lock 等待写锁
+        static final int READER = 4; // increment value for setting read lock 设置读锁的增量值
 
         /**
          * Tie-breaking utility for ordering insertions when equal

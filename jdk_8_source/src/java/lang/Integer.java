@@ -1377,6 +1377,8 @@ public final class Integer extends Number implements Comparable<Integer> {
      * of the specified {@code int} value.  Returns 32 if the
      * specified value has no one-bits in its two's complement representation,
      * in other words if it is equal to zero.
+     * 在指定 int 值的二进制补码表示形式中最高位（最左边）的 1 位之前，返回零位的数量。
+     * 如果指定值在其二进制补码表示形式中不存在 1 位，换句话说，如果它等于零，则返回 32。
      *
      * <p>Note that this method is closely related to the logarithm base 2.
      * For all positive {@code int} values x:
