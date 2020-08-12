@@ -622,7 +622,7 @@ public class Runtime {
 
     /**
      * Returns the number of processors available to the Java virtual machine.
-     *
+     * 处理器的核数，但由于超线程等技术，可能不准确。
      * <p> This value may change during a particular invocation of the virtual
      * machine.  Applications that are sensitive to the number of available
      * processors should therefore occasionally poll this property and adjust
