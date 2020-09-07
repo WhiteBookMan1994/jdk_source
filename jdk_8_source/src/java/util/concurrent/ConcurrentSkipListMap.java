@@ -64,6 +64,8 @@ import java.util.function.Function;
  * The map is sorted according to the {@linkplain Comparable natural
  * ordering} of its keys, or by a {@link Comparator} provided at map
  * creation time, depending on which constructor is used.
+ * 可缩放的并发 ConcurrentNavigableMap 实现。
+ * 映射可以根据键的自然顺序进行排序，也可以根据创建映射时所提供的 Comparator 进行排序，具体取决于使用的构造方法。
  *
  * <p>This class implements a concurrent variant of <a
  * href="http://en.wikipedia.org/wiki/Skip_list" target="_top">SkipLists</a>
@@ -72,12 +74,16 @@ import java.util.function.Function;
  * {@code remove} operations and their variants.  Insertion, removal,
  * update, and access operations safely execute concurrently by
  * multiple threads.
+ * 此类实现 SkipLists 的并发变体，为 containsKey、get、put、remove 操作及其变体提供预期平均 log(n) 时间开销。
+ * 多个线程可以安全地并发执行插入、移除、更新和访问操作
  *
  * <p>Iterators and spliterators are
  * <a href="package-summary.html#Weakly"><i>weakly consistent</i></a>.
+ * 迭代器是 弱一致 的
  *
  * <p>Ascending key ordered views and their iterators are faster than
  * descending ones.
+ * 升序键排序视图及其迭代器比降序键排序视图及其迭代器更快。
  *
  * <p>All {@code Map.Entry} pairs returned by methods in this class
  * and its views represent snapshots of mappings at the time they were
@@ -85,6 +91,8 @@ import java.util.function.Function;
  * method. (Note however that it is possible to change mappings in the
  * associated map using {@code put}, {@code putIfAbsent}, or
  * {@code replace}, depending on exactly which effect you need.)
+ * 此类及此类视图中的方法返回的所有 Map.Entry 对，表示他们产生时的映射关系快照。
+ * 它们不支持 Entry.setValue 方法。（注意，根据所需效果，可以使用 put、putIfAbsent 或 replace 更改关联映射中的映射关系。）
  *
  * <p>Beware that, unlike in most collections, the {@code size}
  * method is <em>not</em> a constant-time operation. Because of the
@@ -96,6 +104,9 @@ import java.util.function.Function;
  * <em>not</em> guaranteed to be performed atomically. For example, an
  * iterator operating concurrently with a {@code putAll} operation
  * might view only some of the added elements.
+ * 请注意，与在大多数 collection 中不同，这里的 size 方法不是 一个固定时间 (constant-time) 操作。
+ * 因为这些映射的异步特性，确定元素的当前数目需要遍历元素。此外，批量操作 putAll、equals 和 clear 并不 保证能以原子方式 (atomically) 执行。
+ * 例如，与 putAll 操作一起并发操作的迭代器只能查看某些附加元素
  *
  * <p>This class and its views and iterators implement all of the
  * <em>optional</em> methods of the {@link Map} and {@link Iterator}
@@ -103,10 +114,13 @@ import java.util.function.Function;
  * <em>not</em> permit the use of {@code null} keys or values because some
  * null return values cannot be reliably distinguished from the absence of
  * elements.
+ * 此类及其视图和迭代器实现 Map 和 Iterator 接口的所有可选 方法。
+ * 与大多数其他并发 collection 一样，此类不 允许使用 null 键或值，因为无法可靠地区分 null 返回值与不存在的元素值。
  *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
+ * 此类是 Java Collections Framework 的成员。
  *
  * @author Doug Lea
  * @param <K> the type of keys maintained by this map
@@ -125,6 +139,11 @@ public class ConcurrentSkipListMap<K,V> extends AbstractMap<K,V>
      * for the heavily-traversed index lists than can be used for the
      * base lists.  Here's a picture of some of the basics for a
      * possible list with 2 levels of index:
+     * 此类实现了一个类似于树的二维链表的跳表，其中索引级别在与保存数据的基础节点不同的节点中表示。
+     * 使用这种方法代替通常的基于数组的结构有两个原因：
+     * 1）基于数组的实现似乎会遇到更多的复杂性和开销；
+     * 2）对于频繁遍历的索引列表，我们可以使用比基本列表更便宜的算法。
+     * 下面是一张包含两个级别索引的可能列表的一些基本要素的图片：
      *
      * Head nodes          Index nodes
      * +-+    right        +-+                      +-+

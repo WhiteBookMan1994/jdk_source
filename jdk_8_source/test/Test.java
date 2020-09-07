@@ -7,11 +7,12 @@ import java.util.HashMap;
 public class Test {
 
     public static void main(String[] args) {
-        System.out.println(System.identityHashCode(new Integer(1)));
-        System.out.println(new Integer(1).hashCode());
-
-        System.out.println(System.identityHashCode(new String("A")));
-        System.out.println(new String("A").hashCode());
-        System.out.println(new String("A").hashCode());
+        String s1 = new String("hh");
+        String s2 = new String("hh");
+        String s3 = "hh";
+        String s4 = "hh";
+        System.out.println(s1==s2);
+        System.out.println(s1==s3);
+        System.out.println(s3==s4);
     }
 }
