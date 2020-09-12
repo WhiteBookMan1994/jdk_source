@@ -6,13 +6,19 @@ import java.util.HashMap;
  */
 public class Test {
 
-    public static void main(String[] args) {
-        String s1 = new String("hh");
-        String s2 = new String("hh");
-        String s3 = "hh";
-        String s4 = "hh";
-        System.out.println(s1==s2);
-        System.out.println(s1==s3);
-        System.out.println(s3==s4);
+    public static void main(String[] args) throws ClassNotFoundException {
+        try {
+            Class clazz = Class.forName("java.lang.String");
+            System.out.println(clazz.getName()); // java.lang.String
+            clazz = Class.forName("[Ljava.lang.String;");
+            System.out.println(clazz.getName()); // [Ljava.lang.String;
+            clazz = Class.forName("[D");
+            System.out.println(clazz.getName()); // [D
+            clazz = Class.forName("[I");
+            System.out.println(clazz.getName()); // [I
+        } catch(ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        System.out.println(Test[][][].class);
     }
 }
