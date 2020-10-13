@@ -58,20 +58,27 @@ import java.util.concurrent.locks.LockSupport;
  * supporting dependent functions and actions that trigger upon its
  * completion.
  *
+ * 一个{@link Future}，可以显式完成（设置其值和状态），并可用作{@link CompletionStage}，
+ * 支持完成时触发的依赖函数和操作。
+ *
  * <p>When two or more threads attempt to
  * {@link #complete complete},
  * {@link #completeExceptionally completeExceptionally}, or
  * {@link #cancel cancel}
  * a CompletableFuture, only one of them succeeds.
+ * 当两个或者多个线程执行一个CompletableFuture中的complete、completeExceptionally、cancel方法
+ * 时，它们中只会有一个执行成功
  *
  * <p>In addition to these and related methods for directly
  * manipulating status and results, CompletableFuture implements
  * interface {@link CompletionStage} with the following policies: <ul>
+ * 除了这些和直接操作状态和结果的相关方法外，CompletableFuture还实现了接口CompletionStage ，具有以下策略：
  *
  * <li>Actions supplied for dependent completions of
  * <em>non-async</em> methods may be performed by the thread that
  * completes the current CompletableFuture, or by any other caller of
  * a completion method.</li>
+ * 为非异步方法的依赖完成提供的操作可以由完成当前CompletableFuture的线程执行，也可以由完成方法的任何其他调用方执行。
  *
  * <li>All <em>async</em> methods without an explicit Executor
  * argument are performed using the {@link ForkJoinPool#commonPool()}
@@ -80,13 +87,18 @@ import java.util.concurrent.locks.LockSupport;
  * monitoring, debugging, and tracking, all generated asynchronous
  * tasks are instances of the marker interface {@link
  * AsynchronousCompletionTask}. </li>
+ * 所有不使用显式Executor参数的异步方法都使用ForkJoinPool.commonPool()执行
+ * （除非它不支持至少两个并行级别，在这种情况下，将创建一个新线程来运行每个任务）。 为了简化监视，调试和跟踪，
+ * 所有生成的异步任务都是标记接口CompletableFuture.AsynchronousCompletionTask的实例 。
  *
  * <li>All CompletionStage methods are implemented independently of
  * other public methods, so the behavior of one method is not impacted
  * by overrides of others in subclasses.  </li> </ul>
+ * 所有CompletionStage方法都是独立于其他公共方法实现的，因此一个方法的行为不会受到子类中其他方法的重写的影响。
  *
  * <p>CompletableFuture also implements {@link Future} with the following
  * policies: <ul>
+ * CompletableFuture还使用以下策略实现 Future接口：
  *
  * <li>Since (unlike {@link FutureTask}) this class has no direct
  * control over the computation that causes it to be completed,
@@ -95,6 +107,9 @@ import java.util.concurrent.locks.LockSupport;
  * {@code completeExceptionally(new CancellationException())}. Method
  * {@link #isCompletedExceptionally} can be used to determine if a
  * CompletableFuture completed in any exceptional fashion.</li>
+ * 由于（不同于FutureTask ）这个类不能直接控制导致其完成的计算，所以cancel方法
+ * 和 @code completeExceptionally(new CancellationException())} 具有相同的效果。
+ * 方法isCompletedExceptionally()可用于确定CompletableFuture是否以任何异常的方式完成
  *
  * <li>In case of exceptional completion with a CompletionException,
  * methods {@link #get()} and {@link #get(long, TimeUnit)} throw an
@@ -103,6 +118,9 @@ import java.util.concurrent.locks.LockSupport;
  * contexts, this class also defines methods {@link #join()} and
  * {@link #getNow} that instead throw the CompletionException directly
  * in these cases.</li> </ul>
+ * 如果是CompletionException异常完成,方法get()和get(long, TimeUnit)将抛出
+ * 与对应的CompletionException中保持的相同原因的ExecutionException。
+ * 为了简化大多数情况下的使用，此类还定义了方法join()和getNow(T) ，而是在这些情况下直接抛出CompletionException。
  *
  * @author Doug Lea
  * @since 1.8
