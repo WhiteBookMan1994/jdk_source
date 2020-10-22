@@ -165,7 +165,7 @@ public interface CompletionStage<T> {
      * normally, is executed with this stage's result as the argument
      * to the supplied function.
      *
-     * 返回一个新的CompletionStage，当此阶段正常完成时，将以该阶段的结果作为所提供函数的参数执行。
+     * 当此阶段正常完成时，将以该阶段的结果作为所提供函数的参数执行。最后返回一个新的CompletionStage，
      *
      * See the {@link CompletionStage} documentation for rules
      * covering exceptional completion.
@@ -184,8 +184,8 @@ public interface CompletionStage<T> {
      * normally, is executed using this stage's default asynchronous
      * execution facility, with this stage's result as the argument to
      * the supplied function.
-     * 返回一个新的CompletionStage，当该阶段正常完成时，将使用此阶段的默认异步执行工具执行此阶段的结果作为所提供函数的参数。
-     *
+     * 当该阶段正常完成时，将使用此阶段的默认异步执行工具执行此阶段的结果作为所提供函数的参数。
+     * 最后返回一个新的CompletionStage，
      * See the {@link CompletionStage} documentation for rules
      * covering exceptional completion.
      *
@@ -225,7 +225,7 @@ public interface CompletionStage<T> {
      * normally, is executed with this stage's result as the argument
      * to the supplied action.
      *
-     * 返回一个新的CompletionStage，当此阶段正常完成时，将以该阶段的结果作为Consumer的参数执行。
+     * 当当前阶段正常完成时，将以该阶段的结果作为Consumer的参数执行，最后返回一个新的CompletionStage，
      *
      * See the {@link CompletionStage} documentation for rules
      * covering exceptional completion.
