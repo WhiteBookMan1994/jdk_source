@@ -1,4 +1,4 @@
-package util.concurrent;
+package util.concurrent.completablefuture;
 
 import java.util.Date;
 import java.util.concurrent.Callable;
