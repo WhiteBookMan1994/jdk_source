@@ -1,6 +1,7 @@
 import cn.hutool.core.date.DateField;
 import cn.hutool.core.date.DateUtil;
 
+import java.security.MessageDigest;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -16,19 +17,32 @@ import java.util.List;
  */
 public class Test1 {
 
-    public static void main(String[] args) {
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-        Date date = null;
-        try {
-            date = format.parse("2019-10-31");
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        System.out.println(DateUtil.offset(date, DateField.MONTH,4));
-        System.out.println(DateUtil.dayOfMonth(date));
+    public static void main(String[] args) throws ParseException {
+        int num = Integer.MAX_VALUE;
+        System.out.println(num << 1);
+        System.out.println(num >> 2);
 
-        LocalDateTime localDateTime = dateToLocalDateTime(date).plusMonths(4);
-        System.out.println(localDateTimeToDate(localDateTime));
+    }
+
+    public static String md5(String input) {
+        StringBuffer sb = new StringBuffer();
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(input.getBytes());
+            byte b[] = md.digest();
+            int i;
+            for (int offset = 0; offset < b.length; offset++) {
+                i = b[offset];
+                if (i < 0)
+                    i += 256;
+                if (i < 16)
+                    sb.append("0");
+                sb.append(Integer.toHexString(i));
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        return sb.toString();
     }
 
     public static Date localDateTimeToDate(LocalDateTime localDateTime) {
