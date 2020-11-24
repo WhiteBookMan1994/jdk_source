@@ -1,15 +1,9 @@
-import cn.hutool.core.date.DateField;
-import cn.hutool.core.date.DateUtil;
-
 import java.security.MessageDigest;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 /**
  * @author dingchenchen
@@ -21,7 +15,6 @@ public class Test1 {
         int num = Integer.MAX_VALUE;
         System.out.println(num << 1);
         System.out.println(num >> 2);
-
     }
 
     public static String md5(String input) {
