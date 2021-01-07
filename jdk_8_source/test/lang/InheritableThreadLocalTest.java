@@ -13,6 +13,9 @@ public class InheritableThreadLocalTest {
 
        //InheritableThreadLocal，支持父子线程之间传递参数
         testInheritableThreadLocalTest();
+
+        //阿里巴巴的 TransmittableThreadLocal
+        //使用场景：在使用线程池等会池化复用线程的执行组件情况下传递ThreadLocal。因为此时线程不会初始化执行Thread内部的init方法
     }
 
     public static void testThreadLocal() {
