@@ -40,14 +40,19 @@ import java.util.Collection;
 /**
  * An implementation of {@link ReadWriteLock} supporting similar
  * semantics to {@link ReentrantLock}.
+ * 支持与 ReentrantLock 类似语义的 ReadWriteLock 实现。
+ *
  * <p>This class has the following properties:
+ * 此类具有以下属性：
  *
  * <ul>
  * <li><b>Acquisition order</b>
+ * <li><b>获取顺序</b>
  *
  * <p>This class does not impose a reader or writer preference
  * ordering for lock access.  However, it does support an optional
  * <em>fairness</em> policy.
+ * 此类不会将读取者优先或写入者优先强加给锁访问的排序。但是，它确实支持可选的公平 策略。
  *
  * <dl>
  * <dt><b><i>Non-fair mode (default)</i></b>
@@ -56,6 +61,9 @@ import java.util.Collection;
  * constraints.  A nonfair lock that is continuously contended may
  * indefinitely postpone one or more reader or writer threads, but
  * will normally have higher throughput than a fair lock.
+ * <dt><b><i>非公平模式 (默认)</i></b>
+ * 当构造为非公平锁（默认）时，未指定进入读写锁的顺序，受到 reentrancy 约束的限制。
+ * 连续竞争的非公平锁可能无限期地推迟一个或多个 reader 或 writer 线程，但吞吐量通常要高于公平锁。
  *
  * <dt><b><i>Fair mode</i></b>
  * <dd>When constructed as fair, threads contend for entry using an
@@ -64,6 +72,10 @@ import java.util.Collection;
  * be assigned the write lock, or if there is a group of reader threads
  * waiting longer than all waiting writer threads, that group will be
  * assigned the read lock.
+ * <dt><b><i>公平模式</i></b>
+ * 当构造为公平锁时，线程利用一个近似到达顺序的策略来争夺进入。
+ * 当释放当前保持的锁时，可以为等待时间最长的单个 writer 线程分配写入锁，
+ * 如果有一组等待时间大于所有正在等待的 writer 线程 的 reader 线程，将为该组分配读锁。
  *
  * <p>A thread that tries to acquire a fair read lock (non-reentrantly)
  * will block if either the write lock is held, or there is a waiting
@@ -73,6 +85,10 @@ import java.util.Collection;
  * its wait, leaving one or more reader threads as the longest waiters
  * in the queue with the write lock free, then those readers will be
  * assigned the read lock.
+ * 如果保持写入锁，或者有一个等待的 writer 线程，则试图获得公平读取锁（非重入的）的线程将会阻塞。
+ * 直到当前最旧的等待 writer 线程已获得并释放了写入锁之后，该线程才会获得读取锁。
+ * 当然，如果等待 writer 放弃其等待，而保留一个或更多 reader 线程为队列中带有写入锁自由的时间最长的 waiter，
+ * 则将为那些 reader 分配读取锁。
  *
  * <p>A thread that tries to acquire a fair write lock (non-reentrantly)
  * will block unless both the read lock and write lock are free (which
@@ -82,55 +98,75 @@ import java.util.Collection;
  * if it is possible, regardless of waiting threads.)
  * <p>
  * </dl>
+ * 试图获得公平写入锁的（非重入的）的线程将会阻塞，除非读取锁和写入锁都自由（这意味着没有等待线程）。
+ * （注意，非阻塞 ReentrantReadWriteLock.ReadLock.tryLock() 和 ReentrantReadWriteLock.WriteLock.tryLock() 方法
+ *   不会遵守此公平设置，并将获得锁（如果可能），不考虑等待线程）。
  *
  * <li><b>Reentrancy</b>
+ * <li><b>重入</b>
  *
  * <p>This lock allows both readers and writers to reacquire read or
  * write locks in the style of a {@link ReentrantLock}. Non-reentrant
  * readers are not allowed until all write locks held by the writing
  * thread have been released.
+ * 此锁允许 reader 和 writer 按照 ReentrantLock 的样式重新获取读取锁或写入锁。
+ * 在写入线程保持的所有写入锁都已经释放后，才允许重入 reader 使用它们。
  *
  * <p>Additionally, a writer can acquire the read lock, but not
  * vice-versa.  Among other applications, reentrancy can be useful
  * when write locks are held during calls or callbacks to methods that
  * perform reads under read locks.  If a reader tries to acquire the
  * write lock it will never succeed.
+ * 此外，writer 可以获取读取锁，但反过来则不成立。在其他应用程序中，当在调用或回调那些在读取锁状态下执行读取操作的方法期间保持写入锁时，
+ * 重入很有用。如果 reader 试图获取写入锁，那么将永远不会获得成功。
  *
  * <li><b>Lock downgrading</b>
+ * <li><b>锁降级</b>
  * <p>Reentrancy also allows downgrading from the write lock to a read lock,
  * by acquiring the write lock, then the read lock and then releasing the
  * write lock. However, upgrading from a read lock to the write lock is
  * <b>not</b> possible.
+ * 重入还允许从写入锁降级为读取锁，其实现方式是：先获取写入锁，然后获取读取锁，最后释放写入锁。但是，从读取锁升级到写入锁是不可能的。
  *
  * <li><b>Interruption of lock acquisition</b>
+ * <li><b>锁获取的中断</b>
  * <p>The read lock and write lock both support interruption during lock
  * acquisition.
+ * 读取锁和写入锁都支持锁获取期间的中断。
  *
  * <li><b>{@link Condition} support</b>
+ * <li><b>Condition 支持</b>
  * <p>The write lock provides a {@link Condition} implementation that
  * behaves in the same way, with respect to the write lock, as the
  * {@link Condition} implementation provided by
  * {@link ReentrantLock#newCondition} does for {@link ReentrantLock}.
  * This {@link Condition} can, of course, only be used with the write lock.
+ * 写入锁提供了一个 Condition 实现，对于写入锁来说，该实现的行为与 ReentrantLock.newCondition() 提供的 Condition 实现对 ReentrantLock 所做的行为相同。
+ * 当然，此 Condition 只能用于写入锁。
  *
  * <p>The read lock does not support a {@link Condition} and
  * {@code readLock().newCondition()} throws
  * {@code UnsupportedOperationException}.
+ * 读取锁不支持 Condition，readLock().newCondition() 会抛出 UnsupportedOperationException。
  *
  * <li><b>Instrumentation</b>
+ * <li><b>监测</b>
  * <p>This class supports methods to determine whether locks
  * are held or contended. These methods are designed for monitoring
  * system state, not for synchronization control.
  * </ul>
+ * 此类支持一些确定是保持锁还是争用锁的方法。这些方法设计用于监视系统状态，而不是同步控制。
  *
  * <p>Serialization of this class behaves in the same way as built-in
  * locks: a deserialized lock is in the unlocked state, regardless of
  * its state when serialized.
+ * 此类行为的序列化方式与内置锁的相同：反序列化的锁处于解除锁状态，无论序列化该锁时其状态如何。
  *
  * <p><b>Sample usages</b>. Here is a code sketch showing how to perform
  * lock downgrading after updating a cache (exception handling is
  * particularly tricky when handling multiple locks in a non-nested
  * fashion):
+ * 示例用法。下面的代码展示了如何在更新缓存后执行锁降级（当以非嵌套方式处理多个锁时，异常处理尤其棘手）：
  *
  * <pre> {@code
  * class CachedData {
@@ -173,6 +209,9 @@ import java.util.Collection;
  * overhead that outweighs synchronization overhead. For example, here
  * is a class using a TreeMap that is expected to be large and
  * concurrently accessed.
+ * 在使用某些种类的 Collection 时，可以使用 ReentrantReadWriteLock 来提高并发性。
+ * 通常，在预期 collection 很大，读取者线程访问它的次数多于写入者线程，并且 entail 操作的开销高于同步开销时，这很值得一试。
+ * 例如，以下是一个使用 TreeMap 的类，预期它很大，并且能被同时访问。
  *
  *  <pre> {@code
  * class RWDictionary {
@@ -208,6 +247,8 @@ import java.util.Collection;
  * <p>This lock supports a maximum of 65535 recursive write locks
  * and 65535 read locks. Attempts to exceed these limits result in
  * {@link Error} throws from locking methods.
+ * 实现注意事项：
+ * 此锁最多支持 65535 个递归写入锁和 65535 个读取锁。试图超出这些限制将导致锁方法抛出 Error。
  *
  * @since 1.5
  * @author Doug Lea
