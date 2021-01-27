@@ -55,6 +55,13 @@ import sun.misc.Unsafe;
  * #setState} and {@link #compareAndSetState} is tracked with respect
  * to synchronization.
  *
+ * 为实现依赖于先进先出 (FIFO) 等待队列的阻塞锁和相关同步器（信号量、事件，等等）提供一个框架。
+ * 此类的设计目标是成为依靠单个原子 int 值来表示状态的大多数同步器的一个有用基础。
+ * 子类必须定义更改此状态的受保护方法（protected 级别），并定义哪种状态对于此对象意味着被获取或被释放。
+ * 假定这些条件之后，此类中的其他方法就可以实现所有排队和阻塞机制。
+ * 子类可以维护其他状态字段，但只是为了获得同步而只追踪使用 getState()、setState(int)
+ * 和 compareAndSetState(int, int) 方法来操作以原子方式更新的 int 值。
+ *
  * <p>Subclasses should be defined as non-public internal helper
  * classes that are used to implement the synchronization properties
  * of their enclosing class.  Class
@@ -63,6 +70,10 @@ import sun.misc.Unsafe;
  * {@link #acquireInterruptibly} that can be invoked as
  * appropriate by concrete locks and related synchronizers to
  * implement their public methods.
+ *
+ * 应该将子类定义为非公共内部帮助器类，可用它们来实现其封闭类的同步属性。
+ * 类 AbstractQueuedSynchronizer 没有实现任何同步接口。
+ * 而是定义了诸如 acquireInterruptibly(int) 之类的一些方法，在适当的时候可以通过具体的锁和相关同步器来调用它们，以实现其公共方法。
  *
  * <p>This class supports either or both a default <em>exclusive</em>
  * mode and a <em>shared</em> mode. When acquired in exclusive mode,
@@ -77,6 +88,15 @@ import sun.misc.Unsafe;
  * {@link ReadWriteLock}. Subclasses that support only exclusive or
  * only shared modes need not define the methods supporting the unused mode.
  *
+ * 此类支持默认的 独占 模式和 共享 模式之一，或者二者都支持。
+ * 处于独占模式下时，其他线程试图获取该锁将无法取得成功。
+ * 在共享模式下，多个线程获取某个锁可能（但不是一定）会获得成功。
+ * 此类并不“了解”这些不同，
+ * 除了机械地意识到当在共享模式下成功获取某一锁时，下一个等待线程（如果存在）也必须确定自己是否可以成功获取该锁。
+ * 处于不同模式下的等待线程可以共享相同的 FIFO 队列。
+ * 通常，实现子类只支持其中一种模式，但两种模式都可以在（例如）ReadWriteLock 中发挥作用。
+ * 只支持独占模式或者只支持共享模式的子类不必定义支持未使用模式的方法。
+ *
  * <p>This class defines a nested {@link ConditionObject} class that
  * can be used as a {@link Condition} implementation by subclasses
  * supporting exclusive mode for which method {@link
@@ -90,11 +110,22 @@ import sun.misc.Unsafe;
  * behavior of {@link ConditionObject} depends of course on the
  * semantics of its synchronizer implementation.
  *
+ * 此类通过支持独占模式的子类定义了一个嵌套的 AbstractQueuedSynchronizer.ConditionObject 类，
+ * 可以将这个类用作 Condition 实现。
+ * isHeldExclusively() 方法将报告同步对于当前线程是否是独占的；
+ * 使用当前 getState() 值调用 release(int) 方法则可以完全释放此对象；
+ * 如果给定保存的状态值，那么 acquire(int) 方法可以将此对象最终恢复为它以前获取的状态。
+ * 没有别的 AbstractQueuedSynchronizer 方法创建这样的条件，因此，如果无法满足此约束，则不要使用它。
+ * AbstractQueuedSynchronizer.ConditionObject 的行为当然取决于其同步器实现的语义。
+ *
  * <p>This class provides inspection, instrumentation, and monitoring
  * methods for the internal queue, as well as similar methods for
  * condition objects. These can be exported as desired into classes
  * using an {@code AbstractQueuedSynchronizer} for their
  * synchronization mechanics.
+ *
+ * 此类为内部队列提供了检查、检测和监视方法，还为 condition 对象提供了类似方法。
+ * 可以根据需要使用用于其同步机制的 AbstractQueuedSynchronizer 将这些方法导出到类中
  *
  * <p>Serialization of this class stores only the underlying atomic
  * integer maintaining state, so deserialized objects have empty
@@ -102,12 +133,20 @@ import sun.misc.Unsafe;
  * define a {@code readObject} method that restores this to a known
  * initial state upon deserialization.
  *
+ * 此类的序列化只存储维护状态的基础原子整数，因此已序列化的对象拥有空的线程队列。
+ * 需要可序列化的典型子类将定义一个 readObject 方法，该方法在反序列化时将此对象恢复到某个已知初始状态。
+ *
  * <h3>Usage</h3>
+ *
+ * <h3>使用</h3>
  *
  * <p>To use this class as the basis of a synchronizer, redefine the
  * following methods, as applicable, by inspecting and/or modifying
  * the synchronization state using {@link #getState}, {@link
  * #setState} and/or {@link #compareAndSetState}:
+ *
+ * 为了将此类用作同步器的基础，需要适当地重新定义以下方法，
+ * 这是通过使用 getState()、setState(int) 和/或 compareAndSetState(int, int) 方法来检查和/或修改同步状态来实现的：
  *
  * <ul>
  * <li> {@link #tryAcquire}
@@ -124,15 +163,25 @@ import sun.misc.Unsafe;
  * means of using this class. All other methods are declared
  * {@code final} because they cannot be independently varied.
  *
+ * 默认情况下，每个方法都抛出 UnsupportedOperationException。
+ * 这些方法的实现在内部必须是线程安全的，通常应该很短并且不被阻塞。
+ * 定义这些方法是使用此类的 唯一 受支持的方式。其他所有方法都被声明为 final，因为它们无法是各不相同的。
+ *
  * <p>You may also find the inherited methods from {@link
  * AbstractOwnableSynchronizer} useful to keep track of the thread
  * owning an exclusive synchronizer.  You are encouraged to use them
  * -- this enables monitoring and diagnostic tools to assist users in
  * determining which threads hold locks.
  *
+ * 您也可以查找从 AbstractOwnableSynchronizer 继承的方法，用于跟踪拥有独占同步器的线程。
+ * 鼓励使用这些方法，这允许监控和诊断工具来帮助用户确定哪个线程保持锁。
+ *
  * <p>Even though this class is based on an internal FIFO queue, it
  * does not automatically enforce FIFO acquisition policies.  The core
  * of exclusive synchronization takes the form:
+ *
+ * 即使此类基于内部的某个 FIFO 队列，它也无法强行实施 FIFO 获取策略。
+ * 独占同步的核心采用以下形式：
  *
  * <pre>
  * Acquire:
@@ -159,6 +208,13 @@ import sun.misc.Unsafe;
  * specifically designed to be used by fair synchronizers) returns
  * {@code true}.  Other variations are possible.
  *
+ * （共享模式与此类似，但可能涉及级联信号。）
+ * 因为要在加入队列之前检查线程的获取状况，所以新获取的线程可能闯入 其他被阻塞的和已加入队列的线程之前。
+ * 不过如果需要，可以内部调用一个或多个检查方法，通过定义 tryAcquire 和/或 tryAcquireShared 来禁用闯入。
+ * 特别是 getFirstQueuedThread() 没有返回当前线程的时候，严格的 FIFO 锁定可以定义 tryAcquire 立即返回 false。
+ * 只有 hasQueuedThreads() 返回 true 并且 getFirstQueuedThread 不是当前线程时，更好的非严格公平的版本才可能会立即返回 false；
+ * 如果 getFirstQueuedThread 不为 null 并且不是当前线程，则产生的结果相同。出现进一步的变体也是有可能的。
+ *
  * <p>Throughput and scalability are generally highest for the
  * default barging (also known as <em>greedy</em>,
  * <em>renouncement</em>, and <em>convoy-avoidance</em>) strategy.
@@ -176,6 +232,14 @@ import sun.misc.Unsafe;
  * and/or {@link #hasQueuedThreads} to only do so if the synchronizer
  * is likely not to be contended.
  *
+ * 对于默认闯入（也称为 greedy、renouncement 和 convoy-avoidance）策略，吞吐量和可伸缩性通常是最高的。
+ * 尽管无法保证这是公平的或是无偏向的，但允许更早加入队列的线程先于更迟加入队列的线程再次争用资源，
+ * 并且相对于传入的线程，每个参与再争用的线程都有平等的成功机会。
+ * 此外，尽管从一般意义上说，获取并非“自旋”，它们可以在阻塞之前对用其他计算所使用的 tryAcquire 执行多次调用。
+ * 在只保持独占同步时，这为自旋提供了最大的好处，但不是这种情况时，也不会带来最大的负担。
+ * 如果需要这样做，那么可以使用“快速路径”检查来先行调用 acquire 方法，以这种方式扩充这一点，
+ * 如果可能不需要争用同步器，则只能通过预先检查 hasContended() 和/或 hasQueuedThreads() 来确认这一点。
+ *
  * <p>This class provides an efficient and scalable basis for
  * synchronization in part by specializing its range of use to
  * synchronizers that can rely on {@code int} state, acquire, and
@@ -185,7 +249,14 @@ import sun.misc.Unsafe;
  * {@link java.util.Queue} classes, and {@link LockSupport} blocking
  * support.
  *
+ * 通过特殊化其同步器的使用范围，此类为部分同步化提供了一个有效且可伸缩的基础，
+ * 同步器可以依赖于 int 型的 state、acquire 和 release 参数，以及一个内部的 FIFO 等待队列。
+ * 这些还不够的时候，可以使用 atomic 类、自己的定制 Queue 类和 LockSupport 阻塞支持，
+ * 从更低级别构建同步器。
+ *
  * <h3>Usage Examples</h3>
+ *
+ * 使用示例
  *
  * <p>Here is a non-reentrant mutual exclusion lock class that uses
  * the value zero to represent the unlocked state, and one to
@@ -194,6 +265,10 @@ import sun.misc.Unsafe;
  * thread, this class does so anyway to make usage easier to monitor.
  * It also supports conditions and exposes
  * one of the instrumentation methods:
+ *
+ * 以下是一个非可重入的互斥锁类，它使用值 0 表示未锁定状态，使用 1 表示锁定状态。
+ * 当非重入锁定不严格地需要当前拥有者线程的记录时，此类使得使用监视器更加方便。
+ * 它还支持一些条件并公开了一个检测方法：
  *
  *  <pre> {@code
  * class Mutex implements Lock, java.io.Serializable {
@@ -258,6 +333,9 @@ import sun.misc.Unsafe;
  * except that it only requires a single {@code signal} to
  * fire. Because a latch is non-exclusive, it uses the {@code shared}
  * acquire and release methods.
+ *
+ * 以下是一个锁存器类，它类似于 CountDownLatch，除了只需要触发单个 signal 之外。
+ * 因为锁存器是非独占的，所以它使用 shared 的获取和释放方法。
  *
  *  <pre> {@code
  * class BooleanLatch {
