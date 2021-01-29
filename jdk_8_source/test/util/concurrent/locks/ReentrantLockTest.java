@@ -21,10 +21,10 @@ public class ReentrantLockTest {
     }
 
     public static void main(String[] args) {
-        try{
-            int i = 1 /0;
-        }finally {
-            System.out.println("ll");
-        }
+        int a =1,b =2,c=3;
+        a=b=c;
+        System.out.println(a);
+        System.out.println(b);
+        System.out.println(c);
     }
 }
