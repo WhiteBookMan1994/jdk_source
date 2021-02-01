@@ -57,6 +57,11 @@ import sun.misc.SharedSecrets;
  * operations ({@code add}, {@code set}, and so on) are implemented by
  * making a fresh copy of the underlying array.
  *
+ * ArrayList 的一个线程安全的变体，
+ * 其中所有可变操作（add、set 等等）都是通过对底层数组进行一次新的复制来实现的。
+ * 备注：Alibaba 的注册中心中间件 nacos 有使用到，注册中心读请求远多于写请求，
+ *      可作为典型使用案例。设计思想：以空间换时间。具体实现关键点：volatile + ReentrantLock
+ *
  * <p>This is ordinarily too costly, but may be <em>more</em> efficient
  * than alternatives when traversal operations vastly outnumber
  * mutations, and is useful when you cannot or don't want to
@@ -72,7 +77,16 @@ import sun.misc.SharedSecrets;
  * {@code add}) are not supported. These methods throw
  * {@code UnsupportedOperationException}.
  *
+ * 这一般需要很大的开销，但是当遍历操作的数量大大超过可变操作的数量时，这种方法可能比其他替代方法更有效。
+ * 在不能或不想进行同步遍历，但又需要从并发线程中排除冲突时，它也很有用。
+ * “快照”风格的迭代器方法在创建迭代器时使用了对数组状态的引用。
+ * 此数组在迭代器的生存期内不会更改，因此不可能发生冲突，并且迭代器保证不会抛出 ConcurrentModificationException。
+ * 创建迭代器以后，迭代器就不会反映列表的添加、移除或者更改。
+ * 在迭代器上进行的元素更改操作（remove、set 和 add）不受支持。这些方法将抛出 UnsupportedOperationException。
+ *
  * <p>All elements are permitted, including {@code null}.
+ *
+ * 允许使用所有元素，包括 null。
  *
  * <p>Memory consistency effects: As with other concurrent
  * collections, actions in a thread prior to placing an object into a
@@ -81,9 +95,15 @@ import sun.misc.SharedSecrets;
  * actions subsequent to the access or removal of that element from
  * the {@code CopyOnWriteArrayList} in another thread.
  *
+ * 内存一致性效果：当存在其他并发 collection 时，
+ * 将对象放入 CopyOnWriteArrayList 之前的线程中的操作 happen-before
+ * 随后通过另一线程从 CopyOnWriteArrayList 中访问或移除该元素的操作。
+ *
  * <p>This class is a member of the
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
+ *
+ * 此类是 Java Collections Framework 的成员。
  *
  * @since 1.5
  * @author Doug Lea
@@ -94,14 +114,21 @@ public class CopyOnWriteArrayList<E>
     private static final long serialVersionUID = 8673264195747942595L;
 
     /** The lock protecting all mutators */
+    /** 写操作用的锁。注意：写操作仍然需要加锁的 */
     final transient ReentrantLock lock = new ReentrantLock();
 
     /** The array, accessed only via getArray/setArray. */
+    /** 数组，只能通过getArray/setArray访问。
+     *  注意：使用volatile关键字修饰，确保多线程下修改的可见性
+     */
     private transient volatile Object[] array;
 
     /**
      * Gets the array.  Non-private so as to also be accessible
      * from CopyOnWriteArraySet class.
+     */
+    /**
+     * 获取数组。非私有的方法，以便也可以从CopyOnWriteArraySet类访问。
      */
     final Object[] getArray() {
         return array;
@@ -428,17 +455,23 @@ public class CopyOnWriteArrayList<E>
     /**
      * Appends the specified element to the end of this list.
      *
-     * @param e element to be appended to this list
+     * 将指定元素添加到此列表的尾部。
+     *
+     * @param e element to be appended to this list 要添加到此列表的元素。
      * @return {@code true} (as specified by {@link Collection#add})
+     *         true（根据 Collection.add(E) 的规定）
      */
     public boolean add(E e) {
         final ReentrantLock lock = this.lock;
+        // 写操作还是需要加锁的
         lock.lock();
         try {
             Object[] elements = getArray();
             int len = elements.length;
+            // 构造一个新的数组
             Object[] newElements = Arrays.copyOf(elements, len + 1);
             newElements[len] = e;
+            // 用新的数组取代旧数组
             setArray(newElements);
             return true;
         } finally {
@@ -451,7 +484,10 @@ public class CopyOnWriteArrayList<E>
      * list. Shifts the element currently at that position (if any) and
      * any subsequent elements to the right (adds one to their indices).
      *
+     * 在此列表的指定位置上插入指定元素。将当前在该位置上的元素（如果有）以及所有后续元素向右移（其索引加 1）。
+     *
      * @throws IndexOutOfBoundsException {@inheritDoc}
+     *          如果索引超出范围 ( index < 0 || index > size())
      */
     public void add(int index, E element) {
         final ReentrantLock lock = this.lock;
