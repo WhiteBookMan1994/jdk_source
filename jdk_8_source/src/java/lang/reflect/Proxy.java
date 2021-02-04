@@ -326,6 +326,19 @@ public class Proxy implements java.io.Serializable {
     /**
      * the invocation handler for this proxy instance.
      * @serial
+     * 此代理实例的持有的 InvocationHandler 实例。
+     * 生成的$Proxy类，都会有一个构造方法，参数就是newProxyInstance传入的InvocationHandler h
+     * 上面的constructorParams也体现了这一点，它定义了这构造函数的参数类型必须是InvocationHandler.class
+     * 例如，我们反编译一个$Proxy.class 文件 ：
+     *  public final class $Proxy11 extends Proxy
+     *         implements UserService
+     *     {
+     *
+     *         // 构造方法，参数就是刚才传过来的MyInvocationHandler类的实例
+     *         public $Proxy11(InvocationHandler invocationhandler)
+     *         {
+     *             super(invocationhandler);
+     *         }
      */
     protected InvocationHandler h;
 
