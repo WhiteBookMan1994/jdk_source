@@ -43,19 +43,37 @@ import java.util.regex.PatternSyntaxException;
  * The {@code String} class represents character strings. All
  * string literals in Java programs, such as {@code "abc"}, are
  * implemented as instances of this class.
+ *
+ * String 类代表字符串。Java 程序中的所有字符串字面值（如 "abc" ）都作为此类的实例实现。
+ *
  * <p>
  * Strings are constant; their values cannot be changed after they
  * are created. String buffers support mutable strings.
- * Because String objects are immutable they can be shared. For example:
+ * Because String objects are immutable they can be shared.
+ *
+ * 字符串是常量；它们的值在创建之后不能更改。字符串缓冲区支持可变的字符串。
+ * 因为 String 对象是不可变的，所以（线程间）可以共享。例如：
+ *
+ * For example:
+ *
+ * 例如：
+ *
  * <blockquote><pre>
  *     String str = "abc";
  * </pre></blockquote><p>
+ *
  * is equivalent to:
+ *
+ * 等效于：
+ *
  * <blockquote><pre>
  *     char data[] = {'a', 'b', 'c'};
  *     String str = new String(data);
  * </pre></blockquote><p>
  * Here are some more examples of how strings can be used:
+ *
+ * 下面给出了一些如何使用字符串的更多示例：
+ *
  * <blockquote><pre>
  *     System.out.println("abc");
  *     String cde = "cde";
@@ -70,6 +88,11 @@ import java.util.regex.PatternSyntaxException;
  * copy of a string with all characters translated to uppercase or to
  * lowercase. Case mapping is based on the Unicode Standard version
  * specified by the {@link java.lang.Character Character} class.
+ *
+ * String 类包括的方法可用于检查序列的单个字符、比较字符串、搜索字符串、提取子字符串、
+ * 创建字符串副本并将所有字符全部转换为大写或小写。
+ * 大小写映射基于 Character 类指定的 Unicode 标准版。
+ *
  * <p>
  * The Java language provides special support for the string
  * concatenation operator (&nbsp;+&nbsp;), and for conversion of
@@ -81,6 +104,12 @@ import java.util.regex.PatternSyntaxException;
  * inherited by all classes in Java. For additional information on
  * string concatenation and conversion, see Gosling, Joy, and Steele,
  * <i>The Java Language Specification</i>.
+ *
+ * Java 语言提供对字符串串联符号（"+"）以及将其他对象转换为字符串的特殊支持。
+ * 字符串串联是通过 StringBuilder（或 StringBuffer）类及其 append 方法实现的。
+ * （注：这种方式会创建很多 StringBuilder 对象，浪费内存，所以一般不推荐使用"+"连接很多字符串）
+ * 字符串转换是通过 toString 方法实现的，该方法由 Object 类定义，并可被 Java 中的所有类继承。
+ * 有关字符串串联和转换的更多信息，请参阅 Gosling、Joy 和 Steele 合著的 The Java Language Specification。
  *
  * <p> Unless otherwise noted, passing a <tt>null</tt> argument to a constructor
  * or method in this class will cause a {@link NullPointerException} to be
@@ -111,6 +140,10 @@ import java.util.regex.PatternSyntaxException;
 public final class String
     implements java.io.Serializable, Comparable<String>, CharSequence {
     /** The value is used for character storage. */
+    /**
+     * 注意使用了 final 关键字修饰，保证了String对象是不可变的，因此String对象是线程安全的
+     * 注意concat等方法返回的是一个新的String对象，而非在原对象上做的修改
+     */
     private final char value[];
 
     /** Cache the hash code for the string */

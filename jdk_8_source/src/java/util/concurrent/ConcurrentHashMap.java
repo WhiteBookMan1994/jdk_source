@@ -1327,7 +1327,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                                 }
                             }
                         }
-                        // 如果数组索引位置节点为TreeBi，表明是红黑树结构
+                        // 如果数组索引位置节点为TreeBin，表明是红黑树结构
                         else if (f instanceof TreeBin) {
                             Node<K,V> p;
                             binCount = 2;

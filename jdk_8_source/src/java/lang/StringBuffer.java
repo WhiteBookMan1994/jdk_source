@@ -33,12 +33,21 @@ import java.util.Arrays;
  * point in time it contains some particular sequence of characters, but
  * the length and content of the sequence can be changed through certain
  * method calls.
+ *
+ * 线程安全的可变字符序列。一个类似于 String 的字符串缓冲区，但可以被修改。
+ * 虽然在任意时间点上它都包含某种特定的字符序列，但通过某些方法调用可以改变该序列的长度和内容。
+ *
  * <p>
  * String buffers are safe for use by multiple threads. The methods
  * are synchronized where necessary so that all the operations on any
  * particular instance behave as if they occur in some serial order
  * that is consistent with the order of the method calls made by each of
  * the individual threads involved.
+ *
+ * 可将字符串缓冲区安全地用于多个线程。
+ * 可以在必要时对这些方法进行同步，因此任意特定实例上的所有操作就好像是以串行顺序发生的，
+ * 该顺序与所涉及的每个线程进行的方法调用顺序一致。
+ *
  * <p>
  * The principal operations on a {@code StringBuffer} are the
  * {@code append} and {@code insert} methods, which are
@@ -48,6 +57,11 @@ import java.util.Arrays;
  * {@code append} method always adds these characters at the end
  * of the buffer; the {@code insert} method adds the characters at
  * a specified point.
+ *
+ * StringBuffer 上的主要操作是 append 和 insert 方法，可重载这些方法，以接受任意类型的数据。
+ * 每个方法都能有效地将给定的数据转换成字符串，然后将该字符串的字符追加或插入到字符串缓冲区中。
+ * append 方法始终将这些字符添加到缓冲区的末端；而 insert 方法则在指定的点添加字符。
+ *
  * <p>
  * For example, if {@code z} refers to a string buffer object
  * whose current contents are {@code "start"}, then
@@ -55,10 +69,17 @@ import java.util.Arrays;
  * buffer to contain {@code "startle"}, whereas
  * {@code z.insert(4, "le")} would alter the string buffer to
  * contain {@code "starlet"}.
+ *
+ * 例如，如果 z 引用一个当前内容为 "start" 的字符串缓冲区对象，则此方法调用 z.append("le")
+ * 会使字符串缓冲区包含 "startle"，而 z.insert(4, "le") 将更改字符串缓冲区，使之包含 "starlet"。
+ *
  * <p>
  * In general, if sb refers to an instance of a {@code StringBuffer},
  * then {@code sb.append(x)} has the same effect as
  * {@code sb.insert(sb.length(), x)}.
+ *
+ * 通常，如果 sb 引用 StringBuilder 的一个实例，则 sb.append(x) 和 sb.insert(sb.length(), x) 具有相同的效果。
+ *
  * <p>
  * Whenever an operation occurs involving a source sequence (such as
  * appending or inserting from a source sequence), this class synchronizes
@@ -72,22 +93,37 @@ import java.util.Arrays;
  * This could be satisfied by the caller holding a lock during the
  * operation's call, by using an immutable source sequence, or by not
  * sharing the source sequence across threads.
+ *
+ * 当发生与源序列有关的操作（如源序列中的追加或插入操作）时，该类只在执行此操作的字符串缓冲区上而不是在源上实现同步。
+ *
+ *
  * <p>
  * Every string buffer has a capacity. As long as the length of the
  * character sequence contained in the string buffer does not exceed
  * the capacity, it is not necessary to allocate a new internal
  * buffer array. If the internal buffer overflows, it is
  * automatically made larger.
+ *
+ * 每个字符串缓冲区都有一定的容量。
+ * 只要字符串缓冲区所包含的字符序列的长度没有超出此容量，就无需分配新的内部缓冲区数组。
+ * 如果内部缓冲区（将要）溢出，它会自动变大。
+ *
  * <p>
  * Unless otherwise noted, passing a {@code null} argument to a constructor
  * or method in this class will cause a {@link NullPointerException} to be
  * thrown.
+ *
+ * 除非另有说明，否则将{@code null}参数传递给此类中的构造函数或方法将导致抛出{@link NullPointerException}。
+ *
  * <p>
  * As of  release JDK 5, this class has been supplemented with an equivalent
  * class designed for use by a single thread, {@link StringBuilder}.  The
  * {@code StringBuilder} class should generally be used in preference to
  * this one, as it supports all of the same operations but it is faster, as
  * it performs no synchronization.
+ *
+ * 从 JDK 5 开始，为该类补充了一个单个线程使用的等价类，即 StringBuilder。
+ * 与该类相比，通常应该优先使用 StringBuilder 类，因为它支持所有相同的操作，但由于它不执行同步，所以速度更快。
  *
  * @author      Arthur van Hoff
  * @see     java.lang.StringBuilder

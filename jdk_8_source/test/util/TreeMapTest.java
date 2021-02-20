@@ -2,6 +2,7 @@ package util;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -89,5 +90,15 @@ public class TreeMapTest {
         System.out.println(Runtime.getRuntime().availableProcessors());
     }
 
+    @Test
+    public void testOrder(){
+        //自然顺序：从小到大、从低到高
+        TreeMap treeMap = new TreeMap();
+        treeMap.put(1, "one");
+        treeMap.put(3, "three");
+        treeMap.put(2, "two");
+        System.out.println(treeMap);
+        //输出结果：{1=one, 2=two, 3=three}
+    }
 
 }
