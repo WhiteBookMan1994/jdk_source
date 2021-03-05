@@ -1,5 +1,7 @@
 package util.concurrent.completablefuture;
 
+import org.junit.Test;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -21,5 +23,10 @@ public class CompletableFutureTest1 {
 
     static Integer getMoney1(Integer i){
         return i / 10000;
+    }
+
+    @Test
+    public void mergeMultiThreadResult(){
+
     }
 }
