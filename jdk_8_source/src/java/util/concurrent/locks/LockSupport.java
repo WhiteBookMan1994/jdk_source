@@ -132,9 +132,14 @@ public class LockSupport {
      * to {@code park} is guaranteed not to block. This operation
      * is not guaranteed to have any effect at all if the given
      * thread has not been started.
+     * 如果给定线程尚不可用，则使它可用。
+     * 如果线程在 park 上受阻塞，则它将解除其阻塞状态。
+     * 否则，保证下一次调用 park 不会受阻塞。
+     * 如果给定线程尚未启动，则无法保证此操作有任何效果。
      *
      * @param thread the thread to unpark, or {@code null}, in which case
      *        this operation has no effect
+     *        要执行 unpark 操作的线程；该参数为 null 表示此操作没有任何效果。
      */
     public static void unpark(Thread thread) {
         if (thread != null)
@@ -145,28 +150,44 @@ public class LockSupport {
      * Disables the current thread for thread scheduling purposes unless the
      * permit is available.
      *
+     * 为了线程调度，在许可可用之前禁用当前线程。
+     *
      * <p>If the permit is available then it is consumed and the call returns
      * immediately; otherwise
      * the current thread becomes disabled for thread scheduling
      * purposes and lies dormant until one of three things happens:
      *
+     * 如果许可可用，则使用该许可，并且该调用立即返回；
+     * 否则，为线程调度禁用当前线程，并在发生以下三种情况之一前，使其处于休眠状态：
+     *
      * <ul>
      * <li>Some other thread invokes {@link #unpark unpark} with the
      * current thread as the target; or
      *
+     * 其他某个线程调用将当前线程作为目标调用 unpark；或者
+     *
      * <li>Some other thread {@linkplain Thread#interrupt interrupts}
      * the current thread; or
      *
+     * 其他某个线程中断当前线程；或者
+     *
      * <li>The call spuriously (that is, for no reason) returns.
      * </ul>
+     *
+     * 该调用不合逻辑地（即毫无理由地）返回。
      *
      * <p>This method does <em>not</em> report which of these caused the
      * method to return. Callers should re-check the conditions which caused
      * the thread to park in the first place. Callers may also determine,
      * for example, the interrupt status of the thread upon return.
      *
+     * 此方法不报告是哪种状况导致该方法返回。
+     * 调用者应该首先重新检查导致线程停止的条件。
+     * 例如，调用者还可以在返回时确定线程的中断状态。
+     *
      * @param blocker the synchronization object responsible for this
      *        thread parking
+     *        导致此线程暂停的同步对象
      * @since 1.6
      */
     public static void park(Object blocker) {

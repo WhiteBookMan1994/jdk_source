@@ -681,7 +681,8 @@ public abstract class AbstractQueuedSynchronizer
      * If head exists, its waitStatus is guaranteed not to be
      * CANCELLED.
      * 等待队列的头节点，延迟初始化。 除初始化外，只能通过setHead方法进行修改。
-     * 注意：如果head存在，则保证其waitStatus不被取消。
+     * 注意：如果head存在，则保证其waitStatus不是 CANCELLED。
+     * 需要注意的是，双端链表的头结点是一个无参构造函数的头结点，不存储需要排队的线程。
      */
     private transient volatile Node head;
 

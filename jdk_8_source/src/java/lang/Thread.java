@@ -287,16 +287,22 @@ class Thread implements Runnable {
      * the precision and accuracy of system timers and schedulers. The thread
      * does not lose ownership of any monitors.
      *
+     * 在指定的毫秒数内让当前正在执行的线程休眠（暂停执行），
+     * 此操作受到系统计时器和调度程序精度和准确性的影响。该线程不丢失任何监视器的所属权。
+     *
      * @param  millis
      *         the length of time to sleep in milliseconds
+     *         以毫秒为单位的休眠时间。
      *
      * @throws  IllegalArgumentException
      *          if the value of {@code millis} is negative
+     *          如果入参是负数
      *
      * @throws  InterruptedException
      *          if any thread has interrupted the current thread. The
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
+     *          如果任何线程中断了当前线程。当抛出该异常时，当前线程的 中断状态 被清除。
      */
     public static native void sleep(long millis) throws InterruptedException;
 
