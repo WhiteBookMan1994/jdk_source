@@ -334,10 +334,16 @@ public class ThreadLocal<T> {
         /**
          * The next size value at which to resize.
          */
+        /**
+         * 达到该值进行一次Entry数组扩容
+         */
         private int threshold; // Default to 0
 
         /**
          * Set the resize threshold to maintain at worst a 2/3 load factor.
+         */
+        /**
+         * 达到数组长度的2/3开始扩容
          */
         private void setThreshold(int len) {
             threshold = len * 2 / 3;
@@ -630,6 +636,9 @@ public class ThreadLocal<T> {
          * scanning (fast but retains garbage) and a number of scans
          * proportional to number of elements, that would find all
          * garbage but would cause some insertions to take O(n) time.
+         *
+         * 启发式清理
+         *
          *
          * @param i a position known NOT to hold a stale entry. The
          * scan starts at the element after i.
