@@ -60,6 +60,9 @@ import java.security.Permissions;
  * from non-{@code ForkJoinTask} clients, as well as management and
  * monitoring operations.
  *
+ * 一个运行多个ForkJoinTask的ExecutorService。
+ * {@code ForkJoinPool}为来自非{@code ForkJoinTask}客户端的提交以及管理和监视操作提供入口点。
+ *
  * <p>A {@code ForkJoinPool} differs from other kinds of {@link
  * ExecutorService} mainly by virtue of employing
  * <em>work-stealing</em>: all threads in the pool attempt to find and
@@ -72,12 +75,22 @@ import java.security.Permissions;
  * ForkJoinPool}s may also be appropriate for use with event-style
  * tasks that are never joined.
  *
+ * 一个ForkJoinPool与其他种类的ExecutorService不同主要是采用了 work-stealing（工作窃取）算法：
+ * 所有的线程池中试图找到并执行其他活动任务，这些任务被提交到线程池中 和/或 由其他活动任务创建（最终阻塞等待工作，如果不存在）。
+ * 当大多数任务产生其他子任务（大多数ForkJoinTask ）以及许多小任务从外部客户端提交到池时，这可以实现高效的处理。
+ * 尤其是在构造函数设置asyncMode为真时， ForkJoinPool 还可能也适用于从未加入的事件类型任务。
+ *
+ *
+ *
  * <p>A static {@link #commonPool()} is available and appropriate for
  * most applications. The common pool is used by any ForkJoinTask that
  * is not explicitly submitted to a specified pool. Using the common
  * pool normally reduces resource usage (its threads are slowly
  * reclaimed during periods of non-use, and reinstated upon subsequent
  * use).
+ *
+ * 静态commonPool()方法返回的ForkJoinPool，适用于大多数应用。 公共池被任何未显式提交到指定池的ForkJoinTask使用。
+ * 使用公共池通常会减少资源使用（其线程在不使用期间缓慢回收，并在后续使用时恢复）。
  *
  * <p>For applications that require separate or custom pools, a {@code
  * ForkJoinPool} may be constructed with a given target parallelism
@@ -90,12 +103,20 @@ import java.security.Permissions;
  * ManagedBlocker} interface enables extension of the kinds of
  * synchronization accommodated.
  *
+ * 对于需要单独的或定制的池中的应用程序，一个ForkJoinPool可与给定的目标并行级来构造; 默认情况下，等于可用处理器的数量。
+ * 池尝试通过动态添加，挂起或恢复内部工作线程来维护足够的活动（或可用）线程，即使某些任务停止等待加入其他线程。
+ * 但是，面对阻塞的I / O或其他非托管同步，不能保证这样的调整。
+ * 嵌套的ForkJoinPool.ManagedBlocker接口可以扩展所容纳的同步类型。
+ *
  * <p>In addition to execution and lifecycle control methods, this
  * class provides status check methods (for example
  * {@link #getStealCount}) that are intended to aid in developing,
  * tuning, and monitoring fork/join applications. Also, method
  * {@link #toString} returns indications of pool state in a
  * convenient form for informal monitoring.
+ *
+ * 除了执行和生命周期控制方法之外，该类还提供了用于帮助开发，调优和监视fork / join应用程序的状态检查方法（例如getStealCount() ）。
+ * 此外，方法toString()以方便的形式返回池状态的指示以进行非正式监视。
  *
  * <p>As is the case with other ExecutorServices, there are three
  * main task execution methods summarized in the following table.
@@ -108,6 +129,11 @@ import java.security.Permissions;
  * use the within-computation forms listed in the table unless using
  * async event-style tasks that are not usually joined, in which case
  * there is little difference among choice of methods.
+ *
+ * 与其他ExecutorServices的情况一样，下表总结了三个主要任务执行方法。
+ * 这些设计主要由尚未在当前池中进行fork / join计算的客户端使用。
+ * 这些方法的主要形式接受 ForkJoinTask 的实例 ，但重载形式也允许的纯混合执行Runnable -或Callable -基础的活动为好。
+ * 但是，通常情况下，在池中已经执行的任务会使用表中列出的计算内表单，除非使用不通常连接的异步事件式任务，否则在方法选择方面几乎没有区别
  *
  * <table BORDER CELLPADDING=3 CELLSPACING=1>
  * <caption>Summary of task execution methods</caption>
@@ -136,13 +162,22 @@ import java.security.Permissions;
  * <p>The common pool is by default constructed with default
  * parameters, but these may be controlled by setting three
  * {@linkplain System#getProperty system properties}:
+ *
+ * 公共池默认使用默认参数构建，但这些可以通过设置三个system properties来控制，System.getProperty 方法：
+ *
  * <ul>
  * <li>{@code java.util.concurrent.ForkJoinPool.common.parallelism}
  * - the parallelism level, a non-negative integer
+ *  - 并行级别，非负整数
+ *
  * <li>{@code java.util.concurrent.ForkJoinPool.common.threadFactory}
  * - the class name of a {@link ForkJoinWorkerThreadFactory}
+ * - 类名ForkJoinPool.ForkJoinWorkerThreadFactory
+ *
  * <li>{@code java.util.concurrent.ForkJoinPool.common.exceptionHandler}
  * - the class name of a {@link UncaughtExceptionHandler}
+ *  - 一个Thread.UncaughtExceptionHandler的类名
+ *
  * </ul>
  * If a {@link SecurityManager} is present and no factory is
  * specified, then the default pool uses a factory supplying
@@ -154,14 +189,23 @@ import java.security.Permissions;
  * using a factory that may return {@code null}. However doing so may
  * cause unjoined tasks to never be executed.
  *
+ * 如果一个SecurityManager存在且没有指定工厂，则默认池使用一个工厂提供的线程不启用Permissions 。
+ * 系统类加载器用于加载这些类。 建立这些设置有任何错误，使用默认参数。
+ * 通过将parallelism属性设置为零，和/或使用可能返回null的工厂，可以禁用或限制公共池中的线程的使用。
+ * 但是这样做可能导致未连接的任务永远不会被执行。
+ *
  * <p><b>Implementation notes</b>: This implementation restricts the
  * maximum number of running threads to 32767. Attempts to create
  * pools with greater than the maximum number result in
  * {@code IllegalArgumentException}.
  *
+ * 实现注意事项 ：此实现将运行的最大线程数限制为32767.尝试创建大于最大数目的池导致IllegalArgumentException 。
+ *
  * <p>This implementation rejects submitted tasks (that is, by throwing
  * {@link RejectedExecutionException}) only when the pool is shut down
  * or internal resources have been exhausted.
+ *
+ * 此实现仅在池关闭或内部资源耗尽时拒绝提交的任务（即抛出RejectedExecutionException ）。
  *
  * @since 1.7
  * @author Doug Lea
@@ -171,6 +215,7 @@ public class ForkJoinPool extends AbstractExecutorService {
 
     /*
      * Implementation Overview
+     *        实现概述
      *
      * This class and its nested classes provide the main
      * functionality and control for a set of worker threads:
@@ -188,7 +233,16 @@ public class ForkJoinPool extends AbstractExecutorService {
      * individual methods and nested classes contain only brief
      * comments about details.
      *
+     * 此类及其嵌套类为一组工作线程提供主要功能和控制：
+     * 来自非FJ线程的提交进入提交队列。
+     * Worker 执行这些任务，通常将它们拆分为子任务，这些子任务可能会被其他Worker窃取。
+     * 首选项规则首先优先处理自己队列中的任务（后进先出或先进先出，取决于模式），然后优先处理其他队列中任务的随机先进先出窃取。
+     * 这个框架最初是通过工作窃取来支持树结构并行的工具。
+     * 随着时间的推移，它的可伸缩性优势导致了扩展和更改，以更好地支持更多样化的使用上下文。因为大多数内部方法和嵌套类是相互关联的，所以这里给出了它们的主要原理和描述；个别方法和嵌套类只包含关于细节的简短注释。
+     *
      * WorkQueues
+     * ==========
+     * 工作队列
      * ==========
      *
      * Most operations occur within work-stealing queues (in nested
@@ -212,6 +266,15 @@ public class ForkJoinPool extends AbstractExecutorService {
      * numbers of tasks. To accomplish this, we shift the CAS
      * arbitrating pop vs poll (steal) from being on the indices
      * ("base" and "top") to the slots themselves.
+     *
+     * 大多数操作发生在工作队列中（嵌套类WorkQueue中）。
+     * 这些是Deque（双向队列）的特殊形式，只支持四种可能的结束操作中的三种——push、pop和poll（又名steal），
+     * 进一步的限制是push和pop只能从拥有的线程调用（或者在这里扩展到锁下），而poll可以从其他线程调用。
+     * （如果你不熟悉它们，你可能想阅读Herlihy和Shavit的书“多处理器编程的艺术”，第16章在继续之前更详细地描述了这些。）
+     * 主要的工作窃取队列设计与Chase和Lev的论文“动态循环工作窃取Deque”中的设计大致相似，
+     * 2005年SPAA(http://research.sun.com/scalable/pubs/index.html)和“幂等工作窃取”的迈克尔，萨拉斯瓦特，维切夫，2009年PPoPP(http://portal.acm.org/citation.cfm？内径=1504186）。
+     * 主要的差异最终源于GC需求，即我们尽可能快地取消已占用的插槽，以便在生成大量任务的程序中保持尽可能小的占用空间。
+     * 为此，我们将CAS仲裁pop vs poll（steal）从索引（“base”和“top”）转移到槽本身。
      *
      * Adding tasks then takes the form of a classic array push(task):
      *    q.array[q.top] = task; ++q.top;

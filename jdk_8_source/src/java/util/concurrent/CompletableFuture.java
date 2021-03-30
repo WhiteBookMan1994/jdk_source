@@ -415,6 +415,9 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
      * Default executor -- ForkJoinPool.commonPool() unless it cannot
      * support parallelism.
      */
+    /**
+     * 默认的线程池执行者--默认采用ForkJoinPool.commonPool()，除非它不能支持并行。
+     */
     private static final Executor asyncPool = useCommonPool ?
         ForkJoinPool.commonPool() : new ThreadPerTaskExecutor();
 
