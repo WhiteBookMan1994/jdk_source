@@ -2,6 +2,7 @@ package util.concurrent;
 
 import org.junit.Test;
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,5 +56,82 @@ public class ThreadPoolExecutorTest {
                 }
             });
         }
+    }
+
+    @Test
+    public void testShutDown(){
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(2,4,1000,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<>(10));
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(5000);
+                    System.out.println("hello world");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(10000);
+                    System.out.println("hello kitty");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        executor.shutdown();
+        //shutdown之后再提交任务抛出异常java.util.concurrent.RejectedExecutionException
+        //并且不会等待已提交任务执行完成
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("hello man");
+            }
+        });
+    }
+
+    @Test
+    public void testAwaitTermination() throws InterruptedException {
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 4, 1000, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10));
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(5000);
+                    System.out.println("hello world");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(10000);
+                    System.out.println("hello kitty");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        /*
+         * 如果 awaitTermination 设置的超时时候过短，也可能已提交的任务没有执行完毕就关闭线程池了
+         */
+        executor.awaitTermination(8, TimeUnit.SECONDS);
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("hello man");
+            }
+        });
     }
 }
