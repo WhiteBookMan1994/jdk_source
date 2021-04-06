@@ -437,6 +437,8 @@ public class ScheduledThreadPoolExecutor
      *
      * @param corePoolSize the number of threads to keep in the pool, even
      *        if they are idle, unless {@code allowCoreThreadTimeOut} is set
+     *        池中要保留的线程数，即使它们处于空闲状态，除非设置了{@code allowCoreThreadTimeOut}
+     *
      * @param threadFactory the factory to use when the executor
      *        creates a new thread
      * @throws IllegalArgumentException if {@code corePoolSize < 0}

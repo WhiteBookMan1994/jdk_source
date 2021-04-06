@@ -263,6 +263,12 @@ public class Executors {
      * equivalent {@code newScheduledThreadPool(1, threadFactory)}
      * the returned executor is guaranteed not to be reconfigurable to
      * use additional threads.
+     *
+     * 创建一个单线程执行程序，它可安排在给定延迟后运行命令或者定期地执行。
+     * （注意，如果因为在关闭前的执行期间出现失败而终止了此单个线程，那么如果需要，一个新线程会代替它执行后续的任务）。
+     * 可保证顺序地执行各个任务，并且在任意给定的时间不会有多个线程是活动的。
+     * 与其他等效的 newScheduledThreadPool(1, threadFactory) 不同，可保证无需重新配置此方法所返回的执行程序即可使用其他的线程。
+     *
      * @param threadFactory the factory to use when creating new
      * threads
      * @return a newly created scheduled executor
