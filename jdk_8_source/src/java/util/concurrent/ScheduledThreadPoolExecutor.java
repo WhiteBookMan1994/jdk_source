@@ -1,44 +1,24 @@
-/*
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
-/*
- *
- *
- *
- *
- *
- * Written by Doug Lea with assistance from members of JCP JSR-166
- * Expert Group and released to the public domain, as explained at
- * http://creativecommons.org/publicdomain/zero/1.0/
- */
-
-package java.util.concurrent;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import java.util.AbstractQueue;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.RunnableScheduledFuture;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.*;
 
 /**
  * A {@link ThreadPoolExecutor} that can additionally schedule
@@ -48,11 +28,16 @@ import java.util.*;
  * flexibility or capabilities of {@link ThreadPoolExecutor} (which
  * this class extends) are required.
  *
+ * 继承 ThreadPoolExecutor 的实现，它可另行安排在给定的延迟后运行命令，或者定期执行命令。
+ * 需要多个工作线程时，或者要求 ThreadPoolExecutor 具有额外的灵活性或功能时，此类要优于 Timer。
+ *
  * <p>Delayed tasks execute no sooner than they are enabled, but
  * without any real-time guarantees about when, after they are
  * enabled, they will commence. Tasks scheduled for exactly the same
  * execution time are enabled in first-in-first-out (FIFO) order of
  * submission.
+ * 一旦启用已延迟的任务就执行它，但是有关何时启用，启用后何时执行则没有任何实时保证。
+ * 按照提交的先进先出 (FIFO) 顺序来启用那些被安排在同一执行时间的任务。
  *
  * <p>When a submitted task is cancelled before it is run, execution
  * is suppressed. By default, such a cancelled task is not
@@ -62,6 +47,7 @@ import java.util.*;
  * this, set {@link #setRemoveOnCancelPolicy} to {@code true}, which
  * causes tasks to be immediately removed from the work queue at
  * time of cancellation.
+ *
  *
  * <p>Successive executions of a task scheduled via
  * {@code scheduleAtFixedRate} or
@@ -80,6 +66,9 @@ import java.util.*;
  * use {@code allowCoreThreadTimeOut} because this may leave the pool
  * without threads to handle tasks once they become eligible to run.
  *
+ * 虽然此类继承自 ThreadPoolExecutor，但是几个继承的调整方法对此类并无作用。
+ * 特别是，因为它作为一个使用 corePoolSize 线程和一个无界队列的固定大小的池，所以调整 maximumPoolSize 没有什么效果。
+ *
  * <p><b>Extension notes:</b> This class overrides the
  * {@link ThreadPoolExecutor#execute(Runnable) execute} and
  * {@link AbstractExecutorService#submit(Runnable) submit}
@@ -97,6 +86,13 @@ import java.util.*;
  * {@code ScheduledThreadPoolExecutor} uses a task type extending
  * {@link FutureTask}. However, this may be modified or replaced using
  * subclasses of the form:
+ *
+ * 扩展注意事项：此类重写 AbstractExecutorService 的 submit 方法，以生成内部对象控制每个任务的延迟和调度。
+ * 若要保留功能性，子类中任何进一步重写的这些方法都必须调用超类版本，超类版本有效地禁用附加任务的定制。
+ * 但是，此类提供替代受保护的扩展方法 decorateTask（为 Runnable 和 Callable 各提供一种版本），
+ * 可定制用于通过 execute、submit、schedule、scheduleAtFixedRate 和 scheduleWithFixedDelay
+ * 进入的执行命令的具体任务类型。默认情况下，ScheduledThreadPoolExecutor 使用一个扩展 FutureTask 的任务类型。
+ * 但是，可以使用下列形式的子类修改或替换该类型。
  *
  *  <pre> {@code
  * public class CustomScheduledExecutor extends ScheduledThreadPoolExecutor {
@@ -124,29 +120,39 @@ public class ScheduledThreadPoolExecutor
 
     /*
      * This class specializes ThreadPoolExecutor implementation by
+     * 本类通过以下方式继承实现 ThreadPoolExecutor 类：
      *
      * 1. Using a custom task type, ScheduledFutureTask for
      *    tasks, even those that don't require scheduling (i.e.,
      *    those submitted using ExecutorService execute, not
      *    ScheduledExecutorService methods) which are treated as
      *    delayed tasks with a delay of zero.
+     *    使用自定义任务类型，ScheduledFutureTask用于任务，
+     *    甚至那些不需要调度的任务（即，使用ExecutorService execute而不是ScheduledExecutorService方法提交的任务），
+     *    这些任务被视为延迟为零的延迟任务。
      *
      * 2. Using a custom queue (DelayedWorkQueue), a variant of
      *    unbounded DelayQueue. The lack of capacity constraint and
      *    the fact that corePoolSize and maximumPoolSize are
      *    effectively identical simplifies some execution mechanics
      *    (see delayedExecute) compared to ThreadPoolExecutor.
+     *    使用自定义队列（DelayedWorkQueue），这是无界DelayQueue的一个变体。
+     *    与ThreadPoolExecutor相比，缺少容量约束，corePoolSize 和 Maximumpool 大小实际上是相同的，
+     *    这简化了一些执行机制（请参见delayedExecute）。
      *
      * 3. Supporting optional run-after-shutdown parameters, which
      *    leads to overrides of shutdown methods to remove and cancel
      *    tasks that should NOT be run after shutdown, as well as
      *    different recheck logic when task (re)submission overlaps
      *    with a shutdown.
+     *    支持可选的关机后运行参数，可以覆盖关机方法来删除和取消关机后不应该运行的任务，以及任务（重新）提交与关机重叠时的不同复查逻辑。
      *
      * 4. Task decoration methods to allow interception and
      *    instrumentation, which are needed because subclasses cannot
      *    otherwise override submit methods to get this effect. These
      *    don't have any impact on pool control logic though.
+     *    任务装饰方法允许进行拦截和检测，这是必需的，因为子类无法通过其他方式覆盖Submit方法来获得此效果。
+     *    但是，这些对池控制逻辑没有任何影响。
      */
 
     /**
@@ -167,6 +173,9 @@ public class ScheduledThreadPoolExecutor
     /**
      * Sequence number to break scheduling ties, and in turn to
      * guarantee FIFO order among tied entries.
+     */
+    /**
+     * 序列号可以打破调度关系，进而保证绑定条目之间的FIFO顺序。
      */
     private static final AtomicLong sequencer = new AtomicLong();
 
@@ -192,6 +201,9 @@ public class ScheduledThreadPoolExecutor
          * indicates fixed-delay execution.  A value of 0 indicates a
          * non-repeating task.
          */
+        /**
+         * 以纳秒为单位的重复任务周期。正值表示固定频率执行。负值表示固定延迟执行。值0表示非重复任务。
+         */
         private final long period;
 
         /** The actual task to be re-enqueued by reExecutePeriodic */
@@ -205,6 +217,9 @@ public class ScheduledThreadPoolExecutor
         /**
          * Creates a one-shot action with given nanoTime-based trigger time.
          */
+        /**
+         * 使用给定的基于时间的触发时间创建一次性操作。
+         */
         ScheduledFutureTask(Runnable r, V result, long ns) {
             super(r, result);
             this.time = ns;
@@ -214,6 +229,9 @@ public class ScheduledThreadPoolExecutor
 
         /**
          * Creates a periodic action with given nano time and period.
+         */
+        /**
+         * 创建具有给定时间和周期的周期动作。
          */
         ScheduledFutureTask(Runnable r, V result, long ns, long period) {
             super(r, result);
@@ -285,11 +303,15 @@ public class ScheduledThreadPoolExecutor
         /**
          * Overrides FutureTask version so as to reset/requeue if periodic.
          */
+        /**
+         * 覆盖 FutureTask 版本，以便在周期性的情况下重置/重新排队。
+         */
         public void run() {
             boolean periodic = isPeriodic();
             if (!canRunInCurrentRunState(periodic))
                 cancel(false);
             else if (!periodic)
+                // 非周期性任务直接运行
                 ScheduledFutureTask.super.run();
             else if (ScheduledFutureTask.super.runAndReset()) {
                 setNextRunTime();
@@ -318,14 +340,20 @@ public class ScheduledThreadPoolExecutor
      * shouldn't be run yet.)  If the pool is shut down while the task
      * is being added, cancel and remove it if required by state and
      * run-after-shutdown parameters.
+     * 延迟或周期性任务的主要执行方法。如果池关闭，则拒绝该任务。
+     * 否则，将任务添加到队列中，并在必要时启动一个线程来运行它(我们无法预先启动线程来运行任务，因为任务（可能）还不应该运行。）
+     * 如果在添加任务时线程池已关闭，请根据状态和run-after-shutdown参数取消并删除这个任务。
      *
      * @param task the task
      */
     private void delayedExecute(RunnableScheduledFuture<?> task) {
+        //线程池已关闭，采用设置的拒绝策略拒绝该任务
         if (isShutdown())
             reject(task);
         else {
+            //把task加入到工作队列 workQueue 中
             super.getQueue().add(task);
+            //如果此时 线程池关闭 && 当前线程池状态下任务不可执行 && 删除任务成功，则取消任务的执行
             if (isShutdown() &&
                 !canRunInCurrentRunState(task.isPeriodic()) &&
                 remove(task))
@@ -529,6 +557,7 @@ public class ScheduledThreadPoolExecutor
                                        TimeUnit unit) {
         if (command == null || unit == null)
             throw new NullPointerException();
+        //把 Runnable 装饰成 RunnableScheduledFuture 类型
         RunnableScheduledFuture<?> t = decorateTask(command,
             new ScheduledFutureTask<Void>(command, null,
                                           triggerTime(delay, unit)));

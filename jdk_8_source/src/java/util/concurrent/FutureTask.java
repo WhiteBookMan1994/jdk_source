@@ -99,6 +99,7 @@ public class FutureTask<V> implements RunnableFuture<V> {
     private static final int INTERRUPTED  = 6;
 
     /** The underlying callable; nulled out after running */
+    /** The underlying callable; nulled out after running */
     private Callable<V> callable;
     /** The result to return or exception to throw from get() */
     private Object outcome; // non-volatile, protected by state reads/writes
@@ -292,6 +293,9 @@ public class FutureTask<V> implements RunnableFuture<V> {
      * designed for use with tasks that intrinsically execute more
      * than once.
      *
+     * 执行计算而不设置其结果，然后将此future重置为初始状态，如果计算遇到异常或被取消，则无法执行此操作。
+     * 它设计用于本质上执行多次的任务。
+     *
      * @return {@code true} if successfully run and reset
      */
     protected boolean runAndReset() {
@@ -314,9 +318,11 @@ public class FutureTask<V> implements RunnableFuture<V> {
         } finally {
             // runner must be non-null until state is settled to
             // prevent concurrent calls to run()
+            // 在解决状态之前，runner必须为非null，以防止并发调用run（）
             runner = null;
             // state must be re-read after nulling runner to prevent
             // leaked interrupts
+            // 为运行程序置零后必须重新读取状态，以防止泄漏的中断
             s = state;
             if (s >= INTERRUPTING)
                 handlePossibleCancellationInterrupt(s);
